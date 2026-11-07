@@ -3,6 +3,7 @@ name: build
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -24,3 +25,17 @@ jobs:
       rust-target: x86_64-pc-windows-gnu
       apt-packages: gcc-mingw-w64-x86-64 lld zip unzip
       wine-tests: true
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: ci
+    # All three, even with attest: false (GitHub checks a called workflow's
+    # permissions before any if:).
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-release.yml@v0.4.3
+    with:
+      package: sai-launcher
+      artifact-pattern: SAILauncher-*
