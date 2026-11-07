@@ -7,66 +7,138 @@
 //! window rows all come from it, and the window's parity test fails when a
 //! row has no control or a control has no row.
 //!
-//! The options below are EXAMPLES that show the wiring (a look, a size, a
-//! toggle). Replace them with options whose effect was seen in the real
-//! game (STANDARDS "No unverified options"), and give each one an
-//! end-to-end test: window control → key → the game file it changes.
+//! Every option here was tried in the real game (docs/RUNTIME_NOTES.md):
+//! the Enhanced look runs the first level at 60 fps on this laptop.
 
 use std::path::PathBuf;
 
-use rea_launcher::cfg::{
-    self, ArgError, KeyStyle, Kind, OptionSpec, Rejected, Resolution, Value, spec,
-};
+use rea_launcher::cfg::{self, ArgError, KeyStyle, Kind, OptionSpec, Rejected, Value, spec};
 use rea_launcher::display;
 
-/// The settings file, next to the exe (portable) or in the launcher's
-/// AppData folder.
+/// The settings file, next to the launcher (portable) or in the launcher's
+/// config folder.
 pub const FILE_NAME: &str = "launcher.cfg";
 
-/// Flags spell keys with hyphens: `--display-mode` is `display_mode`.
+/// Flags spell keys with hyphens: `--integer-scale` is `integer_scale`.
 pub const STYLE: KeyStyle = KeyStyle::Underscore;
 
 /// The launcher's own switches: they take no value and never reach
 /// `launcher.cfg`.
 pub const SWITCHES: &[&str] = &["--settings", "--no-window", "--check", "--linux"];
 
-/// Looks, as `(value, label)` for the option table.
+/// Looks, as `(value, label)` for the option table and the window cards.
 pub const LOOKS: &[(&str, &str)] = &[
     ("original", "Original"),
-    ("recommended", "Recommended"),
+    ("enhanced", "Enhanced"),
+    ("crt", "CRT"),
+    ("widescreen", "Widescreen"),
     ("steam_deck", "Steam Deck"),
 ];
 
-/// The smallest and largest sizes the game is offered.
-pub const MIN_SIZE: (u32, u32) = (640, 480);
-pub const MAX_SIZE: (u32, u32) = (7680, 4320);
+pub const ASPECTS: &[(&str, &str)] = &[
+    ("pixel", "Pixel-perfect (8:7)"),
+    ("4:3", "4:3"),
+    ("widescreen", "Widescreen (16:9)"),
+];
+
+pub const SHADERS: &[(&str, &str)] = &[
+    ("off", "Off"),
+    ("sharp", "Sharp"),
+    ("crt", "CRT"),
+    ("smooth", "Smooth"),
+];
+
+pub const OVERCLOCKS: &[(&str, &str)] = &[
+    ("off", "Off"),
+    ("light", "Light"),
+    ("compatible", "Compatible"),
+    ("max", "Max"),
+];
+
+pub const MODE7: &[(&str, &str)] = &[("off", "Off"), ("2x", "2×"), ("4x", "4×")];
+
+pub const RUNAHEAD: &[(&str, &str)] = &[("0", "Off"), ("1", "1 frame"), ("2", "2 frames")];
+
+pub const CORES: &[(&str, &str)] = &[
+    ("auto", "Auto"),
+    ("snes9x", "Snes9x"),
+    ("bsnes_hd", "bsnes-hd"),
+];
 
 /// Every option: `launcher.cfg` key, flag and window control.
 pub const OPTIONS: &[OptionSpec] = &[
     OptionSpec::new(
         "game",
         Kind::Path,
-        "Game folder",
-        "The folder with your installed game. It is only read, never changed.",
-    ),
+        "ROM folder",
+        "The folder with Super Adventure Island.sfc, or the ROM file itself. It is \
+         only read, never changed.",
+    )
+    .with_placeholder("<folder or .sfc file>"),
     OptionSpec::new(
         "look",
         Kind::Choice(LOOKS),
         "Look",
-        "Sets the picture options at once: as the game shipped, recommended for your \
-         screen, or for the Steam Deck. Options set after it win.",
+        "Sets the picture options at once: the game as shipped, the recommended \
+         crisp look, a CRT, or the experimental Mode 7 widescreen. Options set after \
+         it win.",
     ),
     OptionSpec::new(
-        "resolution",
-        Kind::Size {
-            min: MIN_SIZE,
-            max: MAX_SIZE,
-            aliases: cfg::ORIGINAL,
-        },
-        "Resolution",
-        "The game's screen size, or original for the size it shipped with.",
+        "aspect",
+        Kind::Choice(ASPECTS),
+        "Aspect ratio",
+        "Pixel-perfect keeps the SNES 8:7 pixels square; 4:3 is the television \
+         shape; widescreen is only for the bsnes-hd Mode 7 scenes.",
     )
-    .with_example("1920x1080"),
+    .unset_label("As the core"),
+    OptionSpec::new(
+        "integer_scale",
+        Kind::Toggle,
+        "Integer scaling",
+        "Only whole-number enlargements, so every pixel stays the same size. It \
+         leaves black borders on screens that do not fit another multiple.",
+    ),
+    OptionSpec::new(
+        "shader",
+        Kind::Choice(SHADERS),
+        "Shader",
+        "How the picture is enlarged: off (nearest), sharp, a CRT monitor look, or \
+         a smooth xBR edge blend.",
+    ),
+    OptionSpec::new(
+        "overclock",
+        Kind::Choice(OVERCLOCKS),
+        "Reduce slowdown",
+        "Raises the emulated SNES CPU to remove in-game slowdown. Compatible is the \
+         safe choice for most games; Max can break timing.",
+    ),
+    OptionSpec::new(
+        "mode7_hd",
+        Kind::Choice(MODE7),
+        "HD Mode 7",
+        "Draws Mode 7 backgrounds at 2× or 4× the original resolution. It only \
+         affects Mode 7 scenes.",
+    ),
+    OptionSpec::new(
+        "hires_blend",
+        Kind::Toggle,
+        "Hi-res blending",
+        "Merges the SNES high-resolution layers instead of showing them as hard \
+         alternating lines.",
+    ),
+    OptionSpec::new(
+        "reduce_flicker",
+        Kind::Toggle,
+        "Reduce flicker",
+        "Lets more sprites stay on screen at once, so fewer of them blink out.",
+    ),
+    OptionSpec::new(
+        "widescreen",
+        Kind::Toggle,
+        "Widescreen (Mode 7)",
+        "The bsnes-hd experimental widescreen. It only widens Mode 7 scenes; the \
+         ordinary side-scrolling levels stay 4:3.",
+    ),
     OptionSpec::new(
         "vsync",
         Kind::Toggle,
@@ -74,38 +146,102 @@ pub const OPTIONS: &[OptionSpec] = &[
         "Waits for the screen's refresh: no tearing, slightly more input delay.",
     ),
     OptionSpec::new(
+        "run_ahead",
+        Kind::Choice(RUNAHEAD),
+        "Run-ahead",
+        "Runs frames ahead of the screen to cut input lag. Two frames is a good \
+         default; turn it off if audio crackles.",
+    ),
+    OptionSpec::new(
+        "fullscreen",
+        Kind::Toggle,
+        "Fullscreen",
+        "The game fills the screen instead of opening in a window.",
+    ),
+    OptionSpec::new(
+        "core",
+        Kind::Choice(CORES),
+        "Core",
+        "Which SNES core runs the game. Auto uses Snes9x, or bsnes-hd when \
+         widescreen is on.",
+    ),
+    OptionSpec::new(
+        "show_fps",
+        Kind::Toggle,
+        "Show FPS",
+        "The emulator's frame-rate counter in the corner.",
+    ),
+    OptionSpec::new(
+        "saves",
+        Kind::Path,
+        "Saves folder",
+        "Where the launcher keeps your save files and save states.",
+    )
+    .launcher_only(),
+    OptionSpec::new(
         "runtime",
         Kind::Path,
         "Runtime folder",
-        "Where the launcher keeps its private copy of the game. Default: a runtime \
-         folder beside launcher.log.",
+        "Where the launcher keeps its generated emulator configuration and logs.",
+    )
+    .launcher_only(),
+    OptionSpec::new(
+        "retroarch",
+        Kind::Path,
+        "RetroArch",
+        "The RetroArch program. By default the launcher finds it on PATH, or in \
+         the Windows package.",
+    )
+    .with_placeholder("<program>")
+    .launcher_only(),
+    OptionSpec::new(
+        "core_dir",
+        Kind::Path,
+        "Core folder",
+        "The folder with snes9x_libretro and bsnes_hd_beta_libretro. By default the \
+         launcher finds it in the system's libretro folder or the Windows package.",
+    )
+    .launcher_only(),
+    OptionSpec::new(
+        "shader_dir",
+        Kind::Path,
+        "Shader folder",
+        "The root of the slang shaders (the folder that contains crt/ and \
+         pixel-art-scaling/).",
     )
     .launcher_only(),
 ];
 
 /// Comment lines at the top of a new `launcher.cfg`.
-const HEADING: &str = "Settings for SAILauncher.exe (Super Adventure Island).\n\
-    Every key is also a command-line flag: resolution = 1920x1080 is --resolution 1920x1080.\n\
-    A key left commented out keeps the game's own value.";
+const HEADING: &str = "Settings for the Super Adventure Island launcher.\n\
+    Every key is also a command-line flag: integer_scale = off is --integer-scale off.\n\
+    A key left commented out keeps the emulator core's own value.";
 
-/// A look: a named set of option values.
+/// A look: a named set of picture values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Look {
-    /// The game as it shipped.
     Original,
-    /// The launcher's pick for the player's screen.
-    Recommended,
+    Enhanced,
+    Crt,
+    Widescreen,
     SteamDeck,
 }
 
 impl Look {
-    pub const ALL: [Look; 3] = [Look::Original, Look::Recommended, Look::SteamDeck];
+    pub const ALL: [Look; 5] = [
+        Look::Original,
+        Look::Enhanced,
+        Look::Crt,
+        Look::Widescreen,
+        Look::SteamDeck,
+    ];
 
-    /// The `launcher.cfg` value.
     pub fn key(self) -> &'static str {
         match self {
             Look::Original => "original",
-            Look::Recommended => "recommended",
+            Look::Enhanced => "enhanced",
+            Look::Crt => "crt",
+            Look::Widescreen => "widescreen",
             Look::SteamDeck => "steam_deck",
         }
     }
@@ -114,7 +250,6 @@ impl Look {
         Look::ALL.into_iter().find(|look| look.key() == key)
     }
 
-    /// The window's card title (the option table's label for the value).
     pub fn label(self) -> &'static str {
         LOOKS
             .iter()
@@ -122,49 +257,109 @@ impl Look {
             .map_or("", |(_, label)| label)
     }
 
-    /// The look recommended on `screen`: Steam Deck on a Deck's screen.
+    /// The look recommended on `screen`: Steam Deck on a Deck.
     pub fn recommended(screen: Option<(u32, u32)>) -> Look {
         if display::is_steam_deck(screen) {
             Look::SteamDeck
         } else {
-            Look::Recommended
+            Look::Enhanced
         }
     }
 
-    /// The look's values on `screen`. EXAMPLE values: each one must be
-    /// verified in the real game before it ships.
-    pub fn picture(self, screen: Option<(u32, u32)>) -> Picture {
-        let resolution = match self {
-            Look::Original => Resolution::Original,
-            Look::Recommended => {
-                let (w, h) = screen.and_then(display::landscape).unwrap_or((1920, 1080));
-                Resolution::Size(w, h)
-            }
-            Look::SteamDeck => {
-                let (w, h) = display::STEAM_DECK_SCREEN;
-                Resolution::Size(w, h)
-            }
-        };
-        Picture {
-            resolution: Some(resolution),
-            vsync: Some(true),
+    /// The look's values. The screen does not change them; the emulator picks
+    /// the largest integer multiple that fits.
+    pub fn picture(self, _screen: Option<(u32, u32)>) -> Picture {
+        match self {
+            Look::Original => Picture {
+                aspect: Some("4:3"),
+                integer_scale: Some(false),
+                shader: Some("off"),
+                overclock: Some("off"),
+                mode7_hd: Some("off"),
+                hires_blend: Some(false),
+                reduce_flicker: Some(false),
+                widescreen: Some(false),
+                vsync: Some(true),
+                run_ahead: Some("2"),
+                fullscreen: Some(true),
+                core: Some("snes9x"),
+                show_fps: Some(false),
+            },
+            Look::Enhanced | Look::SteamDeck => Picture {
+                aspect: Some("pixel"),
+                integer_scale: Some(true),
+                shader: Some("off"),
+                overclock: Some("compatible"),
+                mode7_hd: Some("2x"),
+                hires_blend: Some(true),
+                reduce_flicker: Some(true),
+                widescreen: Some(false),
+                vsync: Some(true),
+                run_ahead: Some("2"),
+                fullscreen: Some(true),
+                core: Some("snes9x"),
+                show_fps: Some(false),
+            },
+            Look::Crt => Picture {
+                shader: Some("crt"),
+                ..Look::Enhanced.picture(None)
+            },
+            Look::Widescreen => Picture {
+                aspect: Some("widescreen"),
+                integer_scale: Some(false),
+                shader: Some("off"),
+                overclock: Some("compatible"),
+                mode7_hd: Some("2x"),
+                hires_blend: Some(true),
+                reduce_flicker: Some(true),
+                widescreen: Some(true),
+                vsync: Some(true),
+                run_ahead: Some("2"),
+                fullscreen: Some(true),
+                core: Some("bsnes_hd"),
+                show_fps: Some(false),
+            },
         }
     }
 }
 
-/// The picture options for one run. `None` keeps the game's own value.
+/// The picture options for one run. `None` keeps the core's own value.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Picture {
-    pub resolution: Option<Resolution>,
+    pub aspect: Option<&'static str>,
+    pub integer_scale: Option<bool>,
+    pub shader: Option<&'static str>,
+    pub overclock: Option<&'static str>,
+    pub mode7_hd: Option<&'static str>,
+    pub hires_blend: Option<bool>,
+    pub reduce_flicker: Option<bool>,
+    pub widescreen: Option<bool>,
     pub vsync: Option<bool>,
+    pub run_ahead: Option<&'static str>,
+    pub fullscreen: Option<bool>,
+    pub core: Option<&'static str>,
+    pub show_fps: Option<bool>,
 }
 
 impl Picture {
     /// The values as `(key, launcher.cfg text)`, for the window and the log.
-    pub fn values(&self) -> [(&'static str, Option<String>); 2] {
+    pub fn values(&self) -> [(&'static str, Option<String>); 13] {
+        let text = |value: Option<&'static str>| value.map(str::to_owned);
+        let flag = |value: Option<bool>| value.map(|on| cfg::on_off(on).to_owned());
         [
-            ("resolution", self.resolution.map(|r| r.to_string())),
-            ("vsync", self.vsync.map(|on| cfg::on_off(on).to_owned())),
+            ("aspect", text(self.aspect)),
+            ("integer_scale", flag(self.integer_scale)),
+            ("shader", text(self.shader)),
+            ("overclock", text(self.overclock)),
+            ("mode7_hd", text(self.mode7_hd)),
+            ("hires_blend", flag(self.hires_blend)),
+            ("reduce_flicker", flag(self.reduce_flicker)),
+            ("widescreen", flag(self.widescreen)),
+            ("vsync", flag(self.vsync)),
+            ("run_ahead", text(self.run_ahead)),
+            ("fullscreen", flag(self.fullscreen)),
+            ("core", text(self.core)),
+            ("show_fps", flag(self.show_fps)),
         ]
     }
 
@@ -172,9 +367,52 @@ impl Picture {
     pub fn describe(&self) -> String {
         self.values()
             .iter()
-            .map(|(key, value)| format!("{key} {}", value.as_deref().unwrap_or("(game's own)")))
+            .map(|(key, value)| format!("{key} {}", value.as_deref().unwrap_or("(core's own)")))
             .collect::<Vec<_>>()
             .join(", ")
+    }
+
+    /// `flags`' set values over `self`'s.
+    fn overlay(&mut self, flags: Picture) {
+        if flags.aspect.is_some() {
+            self.aspect = flags.aspect;
+        }
+        if flags.integer_scale.is_some() {
+            self.integer_scale = flags.integer_scale;
+        }
+        if flags.shader.is_some() {
+            self.shader = flags.shader;
+        }
+        if flags.overclock.is_some() {
+            self.overclock = flags.overclock;
+        }
+        if flags.mode7_hd.is_some() {
+            self.mode7_hd = flags.mode7_hd;
+        }
+        if flags.hires_blend.is_some() {
+            self.hires_blend = flags.hires_blend;
+        }
+        if flags.reduce_flicker.is_some() {
+            self.reduce_flicker = flags.reduce_flicker;
+        }
+        if flags.widescreen.is_some() {
+            self.widescreen = flags.widescreen;
+        }
+        if flags.vsync.is_some() {
+            self.vsync = flags.vsync;
+        }
+        if flags.run_ahead.is_some() {
+            self.run_ahead = flags.run_ahead;
+        }
+        if flags.fullscreen.is_some() {
+            self.fullscreen = flags.fullscreen;
+        }
+        if flags.core.is_some() {
+            self.core = flags.core;
+        }
+        if flags.show_fps.is_some() {
+            self.show_fps = flags.show_fps;
+        }
     }
 }
 
@@ -183,9 +421,12 @@ impl Picture {
 pub struct Settings {
     pub game: Option<PathBuf>,
     pub look: Option<Look>,
-    pub resolution: Option<Resolution>,
-    pub vsync: Option<bool>,
+    pub picture: Picture,
+    pub saves: Option<PathBuf>,
     pub runtime: Option<PathBuf>,
+    pub retroarch: Option<PathBuf>,
+    pub core_dir: Option<PathBuf>,
+    pub shader_dir: Option<PathBuf>,
 }
 
 impl Settings {
@@ -194,16 +435,30 @@ impl Settings {
         let path = |text: &str| (!text.is_empty()).then(|| PathBuf::from(text));
         match (key, value) {
             ("game", Value::Text(text)) => self.game = path(text),
+            ("saves", Value::Text(text)) => self.saves = path(text),
             ("runtime", Value::Text(text)) => self.runtime = path(text),
+            ("retroarch", Value::Text(text)) => self.retroarch = path(text),
+            ("core_dir", Value::Text(text)) => self.core_dir = path(text),
+            ("shader_dir", Value::Text(text)) => self.shader_dir = path(text),
             ("look", Value::Choice(choice)) => {
                 let look = Look::from_key(choice).ok_or(Rejected::Unknown)?;
                 // A look sets all of its values; options after it win.
                 self.look = Some(look);
-                self.resolution = None;
-                self.vsync = None;
+                self.picture = look.picture(None);
             }
-            ("resolution", Value::Size(resolution)) => self.resolution = Some(resolution),
-            ("vsync", Value::Toggle(on)) => self.vsync = Some(on),
+            ("aspect", Value::Choice(choice)) => self.picture.aspect = Some(choice),
+            ("integer_scale", Value::Toggle(on)) => self.picture.integer_scale = Some(on),
+            ("shader", Value::Choice(choice)) => self.picture.shader = Some(choice),
+            ("overclock", Value::Choice(choice)) => self.picture.overclock = Some(choice),
+            ("mode7_hd", Value::Choice(choice)) => self.picture.mode7_hd = Some(choice),
+            ("hires_blend", Value::Toggle(on)) => self.picture.hires_blend = Some(on),
+            ("reduce_flicker", Value::Toggle(on)) => self.picture.reduce_flicker = Some(on),
+            ("widescreen", Value::Toggle(on)) => self.picture.widescreen = Some(on),
+            ("vsync", Value::Toggle(on)) => self.picture.vsync = Some(on),
+            ("run_ahead", Value::Choice(choice)) => self.picture.run_ahead = Some(choice),
+            ("fullscreen", Value::Toggle(on)) => self.picture.fullscreen = Some(on),
+            ("core", Value::Choice(choice)) => self.picture.core = Some(choice),
+            ("show_fps", Value::Toggle(on)) => self.picture.show_fps = Some(on),
             _ => return Err(Rejected::Unknown),
         }
         Ok(())
@@ -214,26 +469,32 @@ impl Settings {
     pub fn merged(mut self, flags: Settings) -> Settings {
         if flags.look.is_some() {
             self.look = flags.look;
-            self.resolution = None;
-            self.vsync = None;
+            self.picture = flags.picture;
+        } else {
+            self.picture.overlay(flags.picture);
         }
         self.game = flags.game.or(self.game);
+        self.saves = flags.saves.or(self.saves);
         self.runtime = flags.runtime.or(self.runtime);
-        self.resolution = flags.resolution.or(self.resolution);
-        self.vsync = flags.vsync.or(self.vsync);
+        self.retroarch = flags.retroarch.or(self.retroarch);
+        self.core_dir = flags.core_dir.or(self.core_dir);
+        self.shader_dir = flags.shader_dir.or(self.shader_dir);
         self
     }
 
-    /// The picture for this run: the look's values, then the options set
-    /// on their own.
-    pub fn picture(&self, screen: Option<(u32, u32)>) -> Picture {
-        let base = self
-            .look
-            .map(|look| look.picture(screen))
-            .unwrap_or_default();
-        Picture {
-            resolution: self.resolution.or(base.resolution),
-            vsync: self.vsync.or(base.vsync),
+    /// The picture for this run: the look's values, then the options set on
+    /// their own.
+    pub fn picture(&self, _screen: Option<(u32, u32)>) -> Picture {
+        self.picture
+    }
+
+    /// The core to use, with Auto resolved.
+    pub fn core(&self) -> &'static str {
+        match self.picture.core.unwrap_or("auto") {
+            "bsnes_hd" => "bsnes_hd",
+            "snes9x" => "snes9x",
+            _ if self.picture.widescreen.unwrap_or(false) => "bsnes_hd",
+            _ => "snes9x",
         }
     }
 }
@@ -248,7 +509,7 @@ pub fn parse_file(text: &str) -> (Settings, Vec<String>) {
 }
 
 /// Reads the command line: the settings its flags set, and the switches
-/// (`--no-window`, …) in the order given.
+/// (`--no-window`, ...) in the order given.
 pub fn parse_args(
     args: impl IntoIterator<Item = String>,
 ) -> Result<(Settings, Vec<String>), ArgError> {
@@ -290,9 +551,9 @@ pub fn set(text: &str, key: &str, value: &str) -> String {
 /// `--help`.
 pub fn usage() -> String {
     format!(
-        "SAILauncher.exe {version}: plays your own copy of Super Adventure Island on modern Windows and Linux.\n\
+        "SAILauncher {version}: plays your own copy of Super Adventure Island on modern Windows and Linux.\n\
          \n\
-         Usage: SAILauncher.exe [options]\n\
+         Usage: SAILauncher [options]\n\
          \n\
          Without options the settings window opens; Play saves them and starts the game.\n\
          \n\
@@ -301,7 +562,7 @@ pub fn usage() -> String {
          Launcher switches:\n  \
            --settings   only the settings window (exit 0 after Play, 3 when closed)\n  \
            --no-window  play with the saved settings and these options, no window\n  \
-           --check      check the game folder and its edition, then exit (see launcher.log)\n  \
+           --check      check the ROM and its edition, then exit (see launcher.log)\n  \
            --linux      started by the Linux helper (linux/sai-play)\n  \
            --help       this text\n",
         version = env!("CARGO_PKG_VERSION"),
@@ -326,48 +587,91 @@ mod tests {
     fn the_first_run_saves_the_recommended_look_explicitly() {
         let (settings, warnings) = parse_file(&first_run_text(Some((2560, 1440))));
         assert!(warnings.is_empty(), "{warnings:?}");
-        assert_eq!(settings.look, Some(Look::Recommended));
-        assert_eq!(settings.resolution, Some(Resolution::Size(2560, 1440)));
-        assert_eq!(settings.vsync, Some(true));
-        let deck = parse_file(&first_run_text(Some((800, 1280)))).0;
+        assert_eq!(settings.look, Some(Look::Enhanced));
+        assert_eq!(settings.picture.aspect, Some("pixel"));
+        assert_eq!(settings.picture.integer_scale, Some(true));
+        assert_eq!(settings.picture.core, Some("snes9x"));
+        let deck = parse_file(&first_run_text(Some((1280, 800)))).0;
         assert_eq!(deck.look, Some(Look::SteamDeck));
-        assert_eq!(deck.resolution, Some(Resolution::Size(1280, 800)));
+        assert_eq!(deck.picture.core, Some("snes9x"));
     }
 
     #[test]
     fn a_look_sets_its_values_and_later_options_win() {
-        let (settings, _) = parse_file("resolution = 800x600\nlook = original\nvsync = off\n");
-        assert_eq!(
-            settings.picture(None),
-            Picture {
-                resolution: Some(Resolution::Original),
-                vsync: Some(false),
-            }
-        );
-        let unset = Settings::default().picture(None);
-        assert_eq!(unset, Picture::default(), "unset keeps the game's values");
+        let (settings, _) = parse_file("look = original\nshader = crt\nvsync = off\n");
+        assert_eq!(settings.look, Some(Look::Original));
+        assert_eq!(settings.picture.shader, Some("crt"));
+        assert_eq!(settings.picture.vsync, Some(false));
+        let before = parse_file("shader = crt\nlook = original\n").0;
+        assert_eq!(before.picture.shader, Some("off"), "the later look wins");
     }
 
     #[test]
     fn flags_win_over_the_file_and_a_look_flag_replaces_its_values() {
-        let (file, _) = parse_file("game = C:\\Games\\Old\nresolution = 800x600\nvsync = on\n");
-        let (flags, _) = parse_args(["--look".into(), "steam_deck".into()]).unwrap();
+        let (file, _) = parse_file("game = /roms\nlook = original\nshader = off\nvsync = on\n");
+        let (flags, _) = parse_args(["--look".into(), "crt".into()]).unwrap();
         let merged = file.clone().merged(flags);
         assert_eq!(merged.game, file.game);
-        assert_eq!(
-            merged.picture(None).resolution,
-            Some(Resolution::Size(1280, 800))
-        );
+        assert_eq!(merged.picture.shader, Some("crt"));
+        assert_eq!(merged.picture.aspect, Some("pixel"));
         let (flags, _) = parse_args(["--vsync".into(), "off".into()]).unwrap();
         let merged = file.merged(flags);
-        assert_eq!(merged.vsync, Some(false));
-        assert_eq!(merged.resolution, Some(Resolution::Size(800, 600)));
+        assert_eq!(merged.picture.vsync, Some(false));
+        assert_eq!(merged.picture.aspect, Some("4:3"));
+    }
+
+    #[test]
+    fn auto_core_follows_widescreen() {
+        let (settings, _) = parse_file("look = enhanced\n");
+        assert_eq!(settings.core(), "snes9x");
+        let (settings, _) = parse_file("widescreen = on\n");
+        assert_eq!(settings.core(), "bsnes_hd");
+        let (settings, _) = parse_file("core = snes9x\nwidescreen = on\n");
+        assert_eq!(settings.core(), "snes9x");
+    }
+
+    #[test]
+    fn every_picture_option_round_trips_through_the_flags() {
+        for (key, flag, value) in [
+            ("overclock", "--overclock", "max"),
+            ("mode7_hd", "--mode7-hd", "4x"),
+            ("hires_blend", "--hires-blend", "off"),
+            ("reduce_flicker", "--reduce-flicker", "on"),
+            ("run_ahead", "--run-ahead", "1"),
+            ("fullscreen", "--fullscreen", "off"),
+            ("show_fps", "--show-fps", "on"),
+            ("core_dir", "--core-dir", "/usr/lib/libretro"),
+            (
+                "shader_dir",
+                "--shader-dir",
+                "/usr/share/libretro/shaders/shaders_slang",
+            ),
+        ] {
+            let (settings, _) = parse_args([flag.to_owned(), value.to_owned()]).unwrap();
+            let ok = match key {
+                "overclock" => settings.picture.overclock == Some("max"),
+                "mode7_hd" => settings.picture.mode7_hd == Some("4x"),
+                "hires_blend" => settings.picture.hires_blend == Some(false),
+                "reduce_flicker" => settings.picture.reduce_flicker == Some(true),
+                "run_ahead" => settings.picture.run_ahead == Some("1"),
+                "fullscreen" => settings.picture.fullscreen == Some(false),
+                "show_fps" => settings.picture.show_fps == Some(true),
+                "core_dir" => settings.core_dir == Some(PathBuf::from("/usr/lib/libretro")),
+                "shader_dir" => {
+                    settings.shader_dir
+                        == Some(PathBuf::from("/usr/share/libretro/shaders/shaders_slang"))
+                }
+                _ => false,
+            };
+            assert!(ok, "{key} did not round-trip through {flag}");
+            assert!(usage().contains(flag), "--help lacks {flag}");
+        }
     }
 
     #[test]
     fn bad_lines_are_reported_and_kept() {
-        let (settings, warnings) = parse_file("vsync = maybe\nfps = 60\nresolution = 1280x720\n");
-        assert_eq!(settings.resolution, Some(Resolution::Size(1280, 720)));
+        let (settings, warnings) = parse_file("vsync = maybe\nfps = 60\nshader = crt\n");
+        assert_eq!(settings.picture.shader, Some("crt"));
         assert_eq!(warnings.len(), 2, "{warnings:?}");
         assert!(warnings[0].contains("on or off"), "{warnings:?}");
         assert!(warnings[1].contains("unknown setting"), "{warnings:?}");

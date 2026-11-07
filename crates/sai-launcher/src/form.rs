@@ -6,7 +6,7 @@
 
 use rea_launcher::cfg::{self, spec};
 
-use crate::config::{self, Look, OPTIONS, Picture, Settings};
+use crate::config::{self, Look, OPTIONS, Settings};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Form {
@@ -61,18 +61,14 @@ impl Form {
     /// look's, no look card stays selected.
     pub fn picture_edited(&mut self, screen: Option<(u32, u32)>) {
         let settings = self.settings();
-        let current = Picture {
-            resolution: settings.resolution,
-            vsync: settings.vsync,
-        };
         if let Some(look) = settings.look
-            && look.picture(screen) != current
+            && look.picture(screen) != settings.picture(screen)
         {
             self.value_mut("look").clear();
         }
     }
 
-    /// Every value the window cannot save, as `Label: needs …`.
+    /// Every value the window cannot save, as `Label: needs ...`.
     pub fn problems(&self) -> Vec<String> {
         OPTIONS
             .iter()
@@ -114,21 +110,20 @@ impl Form {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rea_launcher::cfg::Resolution;
 
     #[test]
     fn values_round_trip_through_the_file() {
-        let text = "# mine\nresolution = 1280x720\nunknown = kept\n";
+        let text = "# mine\nshader = crt\nunknown = kept\n";
         let mut form = Form::from_text(text);
-        assert_eq!(form.get("resolution"), "1280x720");
+        assert_eq!(form.get("shader"), "crt");
         *form.value_mut("vsync") = "off".into();
-        form.value_mut("resolution").clear();
+        form.value_mut("shader").clear();
         let saved = form.save(text);
         assert!(
             saved.contains("# mine\n") && saved.contains("unknown = kept\n"),
             "{saved}"
         );
-        assert!(saved.contains("#resolution =\n"), "{saved}");
+        assert!(saved.contains("#shader =\n"), "{saved}");
         assert!(saved.contains("vsync = off\n"), "{saved}");
         assert_eq!(Form::from_text(&saved), form);
     }
@@ -138,10 +133,7 @@ mod tests {
         let mut form = Form::from_text("");
         form.choose_look(Look::SteamDeck, None);
         assert_eq!(form.look(), Some(Look::SteamDeck));
-        assert_eq!(
-            form.settings().picture(None).resolution,
-            Some(Resolution::Size(1280, 800))
-        );
+        assert_eq!(form.settings().picture(None).aspect, Some("pixel"));
         form.picture_edited(None);
         assert_eq!(
             form.look(),
@@ -151,16 +143,15 @@ mod tests {
         *form.value_mut("vsync") = "off".into();
         form.picture_edited(None);
         assert_eq!(form.look(), None);
-        assert_eq!(form.settings().vsync, Some(false));
+        assert_eq!(form.settings().picture.vsync, Some(false));
     }
 
     #[test]
     fn values_the_window_cannot_save_are_named() {
         let mut form = Form::from_text("");
-        *form.value_mut("resolution") = "huge".into();
-        assert_eq!(
-            form.problems(),
-            ["Resolution: needs WIDTHxHEIGHT or original"]
-        );
+        *form.value_mut("shader") = "huge".into();
+        let problems = form.problems();
+        assert_eq!(problems.len(), 1);
+        assert!(problems[0].starts_with("Shader: needs"), "{problems:?}");
     }
 }

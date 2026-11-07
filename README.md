@@ -1,338 +1,342 @@
-<!--
-  README for agents: this file follows sdk/docs/playbooks/readme.md (the
-  canonical outline, tone and rules). Keep its headings and their order.
-  Fill every TODO as the launcher grows, delete each TODO comment once its
-  section is done, and delete an optional section only when it doesn't
-  apply. The top half (down to Uninstall) is for players: plain words, no
-  offsets, hashes, function names or env vars. Never write a release or SDK
-  version in prose or links: downloads go through releases/latest and file
-  names use <version>.
-  When the content is complete, run the player-facing text (this file and
-  linux/README.md) through the `humanizer` skill: wording only, facts,
-  commands, paths, option names and links unchanged. Then delete this
-  comment.
--->
-
 # Super Adventure Island Launcher
 
-Play **your own copy** of Super Adventure Island on Windows 10/11, the Steam Deck and
-Linux (Proton, Wine or the AppImage). Point the launcher at your installed
-game and press **Play**: everything the game needs is bundled and set up
-for you, with no mods, patchers or settings to fix by hand. Your game
-folder is only read, never changed: the launcher plays from its own
-private copy.
+Play **your own copy** of Super Adventure Island (SNES) on Linux and
+Windows with a settings window, sensible defaults and no manual emulator
+setup. The launcher reads your ROM, writes its own RetroArch configuration
+and starts the game with the Snes9x core. It contains no game files.
 
-This project contains no game files: you need your own copy of the game.
-
-> **Work in progress.** This launcher was just started; the sections below
-> are filled in as each fix is verified in the real game
-> ([docs/RUNTIME_NOTES.md](docs/RUNTIME_NOTES.md)). Reports are welcome at
-> <https://github.com/ghpo/rea-super-adventure-island/issues>.
-<!-- TODO: when it plays, say where it was played end to end and what is
-not tested yet (native Windows, Steam Deck, Proton without the helper).
-No version number. Remove the note once every platform is verified. -->
-
-<!-- Showcase video: the owner records it and hosts it outside the
-repository, with its poster image. Uncomment and fill:
-[![TODO: what the video shows](https://TODO/showcase-poster.jpg)](https://TODO/showcase.mp4)
-
-*TODO: what is shown, on which platform. Click to watch (m:ss, with sound).*
--->
+> Verified end to end on the owner's Linux laptop: the PT-BR translation,
+> the first level at 60 fps and the Enhanced look; the CRT shader on the
+> title screen. The Windows package was built and its tests pass under
+> Wine; the visual run in the owner's Windows VM is the remaining check
+> (see [docs/RUNTIME_NOTES.md](docs/RUNTIME_NOTES.md)).
 
 ## Problems this launcher solves
 
-<!-- TODO: one row per problem, verified in the real game, from "won't
-start" to "nice to have" (5–12 rows). Credit the community project in the
-row that uses it. Not yet fixed → Known limitations, never here. -->
-
 | Problem | What the launcher does |
 | --- | --- |
-| Patching the game folder risks the copy you own. | Your folder is only read; the launcher works on its own private copy. |
+| An emulator needs a core, shaders and a per-game configuration before it looks right. | Finds the installed RetroArch and cores, or uses the bundled Windows copy, and writes a private configuration for this ROM. |
+| RetroArch's default 4:3 output and fractional monitor scaling soften the SNES pixels. | **Enhanced** draws 8:7 at the largest integer multiple (4× = 1024×896 on 1080p), and on Hyprland it sets the monitor to scale 1 while the game runs, restoring it afterwards. |
+| Some spots slow down on real hardware. | Snes9x's **Reduce slowdown** overclock (`Compatible` in Enhanced) and run-ahead for input latency. |
+| The game looks bare on a modern screen. | Optional **CRT** (`zfast-crt`), **Sharp** and **Smooth** (xBR) shaders, HD Mode 7 2×/4× and hi-res blending. |
+| A 4:3 picture on a wide screen. | The experimental **Widescreen** look uses bsnes-hd's 16:9 Mode 7 widening. Ordinary side-scrolling levels stay 4:3. |
+| Patching a ROM or a global emulator configuration risks your copy. | The ROM is only read; settings, core options, saves and states live in the launcher's own folders. |
+| An unknown ROM or a bad dump starts and behaves strangely. | Every ROM is identified by SHA-256; an unknown build is refused with its digest and a report link. |
 
 ## Screenshots
 
-<!-- TODO: the window's tabs, JPEG under ~1 MB each in docs/images/
-(launcher-<tab>.jpg, about 1600 px wide), current, with alt text; then an
-optional gameplay or before/after image. List them in THIRD_PARTY.md.
-| Play | Picture | Controls |
-| --- | --- | --- |
-| ![The Play tab: TODO](docs/images/launcher-play.jpg) | ![The Picture tab: TODO](docs/images/launcher-picture.jpg) | ![The Controls tab: TODO](docs/images/launcher-controls.jpg) |
--->
+| Play | Picture | Controls | About |
+| :---: | :---: | :---: | :---: |
+| ![The Play tab: ROM folder, five look cards, Play](docs/images/launcher-play.jpg) | ![The Picture tab: aspect, integer scaling, shader, overclock and the other options](docs/images/launcher-picture.jpg) | ![The Controls tab: keyboard bindings and the controller layout](docs/images/launcher-controls.jpg) | ![The About tab: credits and links](docs/images/launcher-about.jpg) |
+
+![The first level with the Enhanced look](docs/images/gameplay.jpg)
+
+![The game with the CRT look](docs/images/gameplay-crt.jpg)
 
 ## What you need
 
-Your installed PC copy of **Super Adventure Island**: the folder with `SuperAdventureIsland.exe`.
+- Your own **Super Adventure Island** ROM (the USA/NTSC `Super Adventure
+  Island.sfc`). This repository ships none and never copies yours into
+  itself.
+- **Linux:** RetroArch, the Snes9x core and (for the CRT/Sharp/Smooth
+  looks) the slang shaders. On Arch:
 
-<!-- TODO: the editions and version supported, in words; what to do with
-an older copy (an official patch and where to get it). -->
+  ```sh
+  sudo pacman -S retroarch libretro-snes9x libretro-shaders-slang libretro-bsnes-hd
+  ```
 
-The launcher knows each supported `SuperAdventureIsland.exe` by its fingerprint
-(SHA-256). Another version is refused with its code and a link to the
-[unknown version](https://github.com/ghpo/rea-super-adventure-island/issues/new?template=unknown-edition.yml)
-form, so it can be added. Report the code, never the game's files.
+  `jq` is used by the optional Hyprland fractional-scale fix; the game runs
+  without it.
+- **Windows:** use the packaged zip, which already contains RetroArch
+  1.22.2, the Snes9x/bsnes-hd cores and the slang shaders. Nothing to
+  install.
 
 ## Download and install
 
-Download from the
-[latest release](https://github.com/ghpo/rea-super-adventure-island/releases/latest):
+### Linux (native)
 
-- **Windows, Steam Deck and Proton:** `SAILauncher-<version>.zip`
-- **Linux:** `SAILauncher-<version>-x86_64.AppImage`
+The launcher is a native Linux program; it is not a Wine/Proton game.
+
+```sh
+cargo build --release --locked
+linux/sai-play                 # settings window, then the game
+linux/sai-play --play          # game with the saved settings
+linux/sai-play stop            # end the session
+linux/sai-play status          # running or idle
+```
+
+`linux/sai-play` needs `sdk/rea-play.sh` beside it (a repository checkout
+has it in `../sdk/`). A packaged release also carries the launcher binary
+and the helper; see [linux/README.md](linux/README.md).
+
+The `sai-launcher.desktop` entry opens the settings window; add
+`~/.local/share/sai-launcher/sai-play --play` as a non-Steam game in Steam
+for the direct game shortcut. The helper uses the system RetroArch.
 
 ### Windows
 
-1. Unzip `SAILauncher-<version>.zip` anywhere outside the game folder.
-   Keep its folders next to `SAILauncher.exe`.
-2. Run `SAILauncher.exe` and follow [First run](#first-run). The launcher
-   isn't signed, so Windows may say "Windows protected your PC" the first
-   time: choose *More info*, then *Run anyway*.
+Unzip the release package (or the `dist/SAILauncher-Windows.zip` produced
+for the owner) anywhere, copy your ROM to a folder the launcher may read,
+run `SAILauncher.exe`, press **Browse…** and pick the folder with the
+`.sfc`. The package contains RetroArch and the cores in
+`RetroArch-Win64/`; nothing is installed system-wide.
+
+The settings window uses **D3D12 through wgpu**, not OpenGL, so it also
+opens in VMs whose display driver has no OpenGL (the owner's VM). If the
+window still cannot open, the `--no-window` commands below play from the
+saved/auto-detected settings.
+
+The launcher also looks for the ROM in a `roms` folder next to the exe or
+one level above it (the owner's `C:\Games\SAILauncher\roms` layout), and
+accepts `Super Adventure Island (USA).sfc`/`.smc` as well as the exact name.
+If the saved choice is missing or no longer works, it auto-detects and shows
+the found path.
+
+If the settings window cannot open (a VM without OpenGL), the launcher still
+plays from the command line:
+
+```bat
+SAILauncher.exe --no-window --linux --game "C:\Games\SAILauncher\roms" --look enhanced
+```
+
+The first run remembers the ROM; afterwards `SAILauncher.exe --no-window`
+(or `--no-window --linux` if the window is unavailable) is enough. Without
+`--game`, the auto-detect uses the `roms` folder next to/above the exe.
 
 ### Steam Deck
 
-1. In Desktop Mode, unzip the release, then in Steam choose *Games → Add a
-   Non-Steam Game to My Library…* and pick `SAILauncher.exe`.
-2. In its *Properties → Compatibility*, force a Proton version.
-3. Back in Game Mode, start it: the window works with the controls and
-   recommends the **Steam Deck** look.
-
-<!-- TODO: say whether Game Mode has been verified. -->
-
-### Linux: AppImage
-
-```sh
-chmod +x SAILauncher-*-x86_64.AppImage
-./SAILauncher-*-x86_64.AppImage
-```
-
-It brings its own Wine, so nothing else needs to be installed. It keeps
-its Wine prefix in `~/.local/share/sai-launcher/prefix` and uses
-[gamescope](https://github.com/ValveSoftware/gamescope) when it is
-installed.
-
-### Linux: Steam (Proton)
-
-Unzip the release, add `SAILauncher.exe` as a non-Steam game and force a
-Proton version in its compatibility settings, as on the Steam Deck.
-
-### Linux: your own Wine
-
-Run `linux/sai-play` from the unzipped release:
-
-```sh
-linux/sai-play            # the settings window, then the game
-linux/sai-play --play     # the game with the saved settings, no window
-linux/sai-play stop       # end the game
-linux/sai-play status     # running or idle
-```
-
-It needs Wine; gamescope is optional. Options, a distrobox and more:
-[linux/README.md](linux/README.md).
+The same Linux helper works in Desktop Mode and Game Mode; the **Steam
+Deck** look is recommended on the Deck's screen. Game Mode, suspend/resume
+and the Deck's pad have not been verified yet (see `docs/RUNTIME_NOTES.md`).
 
 ## First run
 
-1. In the window's **Play** tab, press **Browse…** and choose the folder
-   with `SuperAdventureIsland.exe`. Under Wine your Linux files are on drive `Z:`, for
-   example `Z:\home\you\Games\Super Adventure Island`.
-2. Pick a look: **Recommended** suits most screens.
-3. Press **Play** (or Enter, or Start on a gamepad).
+1. Under **Game**, pick the folder with `Super Adventure Island.sfc` (or
+   type the `.sfc` path itself).
+2. Pick a look: **Enhanced** is recommended, **Steam Deck** on a Deck.
+3. Press **Play** (Enter, or Start on a pad).
 
-The first start copies the game into the launcher's private folder; later
-starts copy only what changed. Your choices are remembered.
+`--check` identifies the ROM and prints its edition without launching:
 
-<!-- TODO: the size of the first copy and how long it takes; any one-time
-button (a download): what it fetches, how big, from where, and that
-nothing downloads unless pressed. -->
+```sh
+linux/sai-play --check --game "/path/to/roms"
+```
 
 ## The settings window
 
-<!-- TODO: one short paragraph per tab, in player words. -->
+- **Play:** the ROM folder/file and the look cards.
+- **Picture:** aspect ratio, integer scaling, shader, reduce slowdown, HD
+  Mode 7, hi-res blending, reduce flicker, widescreen, VSync, run-ahead,
+  fullscreen, core and Show FPS.
+- **Controls:** keyboard bindings for the twelve SNES buttons and the
+  controller layout.
+- **About:** credits and links.
 
-| Look | What it sets | When to pick it |
-| --- | --- | --- |
-| **Original** | The game as it shipped | To play it as in its day |
-| **Recommended** | TODO | Most screens (picked on the first run) |
-| **Steam Deck** | TODO (1280×800) | The Steam Deck (picked on a Deck) |
-| **Custom** | Any change in the other tabs | |
-
-The window works with a gamepad (d-pad moves, A changes the focused
-setting, LB/RB switch tabs, Start plays) and with the keyboard alone (Tab
-moves, arrows pick, Ctrl+Tab switches tabs, Enter plays). A control that
-can't be used right now is greyed out and says why.
-
-## Gamepad
-
-<!-- TODO (optional: delete when the launcher does nothing for pads): what
-the launcher does for pads, verified tips, and the layout:
-| On the pad | In menus | In a race |
-| --- | --- | --- |
--->
+The window works with the keyboard (Tab moves, arrows change, Space
+switches, Ctrl+Tab changes tab, Enter plays) and with a pad (d-pad moves,
+A switches, LB/RB change tab, Start plays). A greyed-out choice says why on
+the window.
 
 ## Options
 
-Every option has the same name in the window, in `launcher.cfg` (with
-underscores) and on the command line (with hyphens); `SAILauncher.exe
---help` lists them. The first run writes a commented `launcher.cfg`
-([Where things live](#where-things-live)).
+### Looks
 
-<!-- TODO: one row per option in the option table (config.rs OPTIONS), in
-window order; nothing missing, nothing extra. "In the window" is
-"Tab: Label" exactly as the window shows it. -->
+| Look | What it sets | When to pick it |
+| --- | --- | --- |
+| **Original** | 4:3, no shader, no overclock, no HD Mode 7, no widescreen | The game as it shipped. |
+| **Enhanced** | 8:7, integer 4×, no shader, Reduce slowdown `Compatible`, HD Mode 7 2×, hi-res blending, reduce flicker, run-ahead 2 | Recommended default: **sharp, pixel-perfect** pixels without a shader; the change is subtle next to a plain 4:3 picture. |
+| **CRT** | Enhanced + `zfast-crt` | The visible retro look: scanlines/mask. Pick it when "melhorado" means CRT. |
+| **Widescreen** | bsnes-hd, 16:9 Mode 7, HD Mode 7 | Experimental; only Mode 7 scenes widen. |
+| **Steam Deck** | Enhanced sizes | The Deck's 1280×800 screen. |
 
-| `launcher.cfg` / flag | In the window | Values | Unset | What it changes |
-| --- | --- | --- | --- | --- |
-| `game` / `--game` | Play: Game folder | a folder | asked on the first run | The folder with `SuperAdventureIsland.exe`; only read. Remembered. |
-| `look` / `--look` | Play: Look | `original`, `recommended`, `steam_deck` | the recommended look | Sets the picture options at once; options set after it win. |
-| `resolution` / `--resolution` | Picture: Resolution | `WIDTHxHEIGHT`, `original` | the game's | The game's screen size. |
-| `vsync` / `--vsync` | Picture: VSync | `on`, `off` | the game's | Waits for the screen's refresh: no tearing. |
-| `runtime` / `--runtime` | — (file and flag only) | a folder | `runtime` beside `launcher.log` | Where the launcher keeps its private copy of the game. |
+| `launcher.cfg` / flag | Values | Unset | What it changes |
+| --- | --- | --- | --- |
+| `game` / `--game` | a folder or `.sfc` | none | The ROM. Only read. |
+| `look` / `--look` | `original`, `enhanced`, `crt`, `widescreen`, `steam_deck` | none (first run saves Enhanced) | Sets all picture options; later options win. |
+| `aspect` / `--aspect` | `pixel` (8:7), `4:3`, `widescreen` | the core's own | The SNES pixel shape. |
+| `integer_scale` / `--integer-scale` | `on`, `off` | the core's own | Whole-number enlargement only. |
+| `shader` / `--shader` | `off`, `sharp`, `crt`, `smooth` | off | The shader preset. |
+| `overclock` / `--overclock` | `off`, `light`, `compatible`, `max` | off | Snes9x's Reduce slowdown. |
+| `mode7_hd` / `--mode7-hd` | `off`, `2x`, `4x` | off | HD Mode 7. |
+| `hires_blend` / `--hires-blend` | `on`, `off` | the core's own | Snes9x hi-res blending. |
+| `reduce_flicker` / `--reduce-flicker` | `on`, `off` | the core's own | More sprites; fewer blink-outs. |
+| `widescreen` / `--widescreen` | `on`, `off` | off | bsnes-hd Mode 7 widescreen. |
+| `vsync` / `--vsync` | `on`, `off` | the core's own | Wait for the screen. |
+| `run_ahead` / `--run-ahead` | `0`, `1`, `2` | off | RetroArch run-ahead frames. |
+| `fullscreen` / `--fullscreen` | `on`, `off` | the core's own | Fullscreen or a window. |
+| `core` / `--core` | `auto`, `snes9x`, `bsnes_hd` | auto | Auto: bsnes-hd only with widescreen. |
+| `show_fps` / `--show-fps` | `on`, `off` | off | The frame-rate counter. |
+| `saves` / `--saves` | a folder | the launcher's data folder | Save files and states. |
+| `runtime` / `--runtime` | a folder | the launcher's data folder | Generated config and logs. |
+| `retroarch` / `--retroarch` | a program | found on PATH / in the Windows package | The RetroArch program. |
+| `core_dir` / `--core-dir` | a folder | the system's / the Windows package's | Where the core DLLs/SOs are. |
+| `shader_dir` / `--shader-dir` | a folder | the system's / the Windows package's | The slang shader root. |
 
-Unset means the game keeps its own value; a value you set and later unset
-goes back to the game's, unless you changed it in the game since.
+The game is NTSC/USA and runs at about 60.1 Hz; **no 60 fps patch is
+needed**. On a 60 Hz screen, 60 is the ceiling.
 
-Any option on the command line skips the window and plays; options
-override `launcher.cfg` for that run only, and only `--game` is
-remembered. The launcher's own switches:
+## Controls
 
-- `--no-window`: play with the saved settings, no window.
-- `--check`: check the game folder and the bundled files without playing;
-  the report goes to `launcher.log` (exit 0 ready, 1 not).
-- `--settings`: only the settings window (exit 0 Play pressed, 3 closed
-  without Play, 4 no window possible).
-- `--linux`: started by `sai-play` or the AppImage.
-- `--help`: every option and its values.
+The **Controls** tab remaps the keyboard for Up/Down/Left/Right, A/B/X/Y,
+L/R and Start/Select: click **Change** and press the key; **Escape**
+cancels; **Reset controls** restores the defaults (RetroArch's
+`x/z/s/a/q/w/Enter/Backspace` and the arrows).
 
-A bad flag or value exits with 2 and a message naming what it takes.
+The controller is **Auto** by default: RetroArch's system autoconfig (the
+player's DualSense on Linux, XInput on Windows). The **Nintendo (SNES A/B)**
+and **Xbox (A = A, B = B)** presets set the standard pad's face and shoulder
+buttons explicitly. A fully custom pad button map belongs in RetroArch's
+own Input settings; the launcher never edits the player's RetroArch input
+configuration.
+
+Both values live in `controls.cfg` beside `launcher.cfg` and are written
+into the private RetroArch configuration when you press Play.
 
 ## Where things live
 
-| What | Windows | Linux (AppImage, `sai-play`) |
+| What | Linux | Windows |
 | --- | --- | --- |
-| Settings (`launcher.cfg`) and log (`launcher.log`) | `%LOCALAPPDATA%\SAILauncher\` | in the Wine prefix, `drive_c/users/<you>/AppData/Local/SAILauncher/` |
-| The launcher's copy of the game | `%LOCALAPPDATA%\SAILauncher\runtime` (the `runtime` option moves it) | the same folder inside the prefix |
-| Your saves | TODO | TODO |
-| Wine prefix | — | `~/.local/share/sai-launcher/prefix` |
-| `sai-play`'s logs and lock | — | `~/.config/sai-launcher` |
+| Settings (`launcher.cfg`), controls (`controls.cfg`), log (`launcher.log`) | `~/.config/sai-launcher/` | `%APPDATA%\SAILauncher\` |
+| Runtime configuration, states, logs | `~/.local/share/sai-launcher/runtime/` | `%LOCALAPPDATA%\SAILauncher\runtime\` |
+| Saves | `~/.local/share/sai-launcher/saves/` | `%LOCALAPPDATA%\SAILauncher\saves\` |
+| The ROM | wherever you keep it | wherever you keep it |
+| The launcher's copy of the game | none (the ROM is read in place) | none |
 
-A `launcher.cfg` next to `SAILauncher.exe` is used instead (a portable
-install). Under Proton everything is inside Steam's prefix for the
-non-Steam game (`steamapps/compatdata/<id>/pfx`).
-
-<!-- TODO: where the game writes its saves (a saves folder the launcher
-mirrors, or only the runtime copy), and any registry key the launcher
-writes. -->
+The launcher never writes to the ROM folder. Your existing RetroArch
+configuration (`~/.config/retroarch/`) is not changed; the launcher uses its
+own `--config` and its own core-options folder.
 
 ## Troubleshooting
 
-- **"This SuperAdventureIsland.exe is not a version the launcher knows"**: your copy is
-  a version not supported yet. Open the
-  [unknown version](https://github.com/ghpo/rea-super-adventure-island/issues/new?template=unknown-edition.yml)
-  form with the code the message shows and where your copy comes from.
-<!-- TODO: the 3–6 most likely real problems found in testing, each as a
-bold symptom and what to do. -->
-- **Anything else:** run `SAILauncher.exe --check`, then open a
-  [bug report](https://github.com/ghpo/rea-super-adventure-island/issues/new?template=bug-report.yml)
-  with `launcher.log` attached (remove personal paths). Never attach game
-  files.
+- **RetroArch/core not found on Linux.** Install the Arch packages above,
+  or pass `--retroarch`, `--core-dir` and `--shader-dir`.
+- **The settings window does not open on Windows.** Since the wgpu/D3D12
+  change it opens without OpenGL; if it still fails, use the `--no-window`
+  command; the launcher's configuration and auto-detected ROM still work.
+- **The picture does not look "better".** Enhanced is sharp integer
+  scaling, not a shader; choose **CRT** or **Smooth** in the menu, or run
+  `SAILauncher.exe --no-window --linux --look crt` (the CLI uses the
+  auto-detected ROM).
+- **The launcher says it cannot find the ROM.** Point **Browse…** at the
+  folder that directly contains the `.sfc` (the `roms` folder, not its
+  parent). The new launcher also searches `roms` beside/above the exe and
+  common `Super Adventure Island*.sfc`/`.smc` names; if the file is still
+  refused, its SHA-256 is shown in `launcher.log` (the edition table may not
+  know that build).
+- **The picture is soft / has black bars.** Enhanced is 8:7 integer 4× with
+  black borders; pick `aspect = 4:3` and integer scaling off for an
+  edge-to-edge 4:3 picture.
+- **The scale stays wrong after a crash on Hyprland.** The helper restores
+  it on every exit path; if the process was killed with SIGKILL, set the
+  monitor scale back to 1.25 in your Hyprland config. The launcher's direct
+  runs also restore it.
+- **Widescreen does nothing in a normal level.** It only widens Mode 7
+  scenes; the side-scrolling levels stay 4:3.
+- **The controller does nothing.** Keep the layout on **Auto** (the system
+  autoconfig: DualSense on Linux, XInput on Windows) and check the pad in
+  RetroArch's Input settings. The launcher's keyboard remaps are in the
+  **Controls** tab and `controls.cfg`.
+- **Read the logs.** `~/.config/sai-launcher/launcher.log` and
+  `~/.local/share/sai-launcher/runtime/logs/retroarch.log` (Windows:
+  `%APPDATA%\SAILauncher\launcher.log`,
+  `%LOCALAPPDATA%\SAILauncher\runtime\logs\retroarch.log`).
 
 ## Known limitations
 
-<!-- TODO: what the launcher doesn't fix, what you lose when a fix can't be
-automated, and the platforms not verified yet. -->
-
-- Not yet verified on native Windows, the Steam Deck, or Proton without
-  `sai-play`; see [docs/RUNTIME_NOTES.md](docs/RUNTIME_NOTES.md).
+- The ROM in the edition table is the owner's **PT-BR translation by
+  Juliano_Dio**. The original USA ROM is not in the table yet; an unknown
+  ROM is refused with its SHA-256.
+- Widescreen is bsnes-hd's experimental Mode 7 widening; 2D levels stay
+  4:3 and some Mode 7 scenes may need a different widescreen setting.
+- On Hyprland with fractional scaling the game runs while the focused
+  monitor is set to scale 1; the helper restores it. This is Hyprland
+  specific.
+- The Windows VM visual run is pending; the Windows build, the package
+  layout and the Windows-target tests were verified under Wine. If the VM
+  has no OpenGL, the settings window uses the fallback command line.
+- The controller presets assume the standard DualSense (Linux)/Xbox
+  (Windows) button indices; use **Auto** for any other pad, or configure the
+  pad in RetroArch's Input settings.
+- No HD texture pack, MSU-1 soundtrack or ROM hack is included; the
+  launcher is for the game as it is.
+- The Steam Deck was not tested on real hardware.
 
 ## Uninstall
 
-1. **Back up your saves first** (see [Where things live](#where-things-live)).
-   <!-- TODO: name the folder(s), and say if a step below deletes them. -->
-2. Delete the folder you unzipped the launcher into (or the AppImage).
-3. Windows: delete `%LOCALAPPDATA%\SAILauncher` (settings, log and the
-   private copy of the game).
-4. Linux: copy your saves out of the prefix, then delete
-   `~/.local/share/sai-launcher` and `~/.config/sai-launcher`. With
-   Proton, removing the shortcut in Steam offers to delete its prefix,
-   saves included.
-
-Your game folder was never changed, so there is nothing to undo there.
+- **Linux:** delete `~/.config/sai-launcher`,
+  `~/.local/share/sai-launcher`, the two `.desktop` entries and the
+  `~/.local/bin/sai-play` link. Your ROM is untouched.
+- **Windows:** delete the unzipped folder, `%APPDATA%\SAILauncher` and
+  `%LOCALAPPDATA%\SAILauncher`. Your ROM is untouched.
 
 ## For developers
 
-Rust (edition 2024), MinGW-w64 with lld for the Windows target, Wine for
-the Windows-target tests and `cargo-deny`. The
-[`gaming` distrobox](https://github.com/akitaonrails/distrobox-gaming) has
-them all.
+The launcher is Rust, built on the rea-launcher-sdk v0.4.3, with a native
+egui window on both platforms. It writes a private RetroArch configuration
+and runs RetroArch; nothing is patched in the ROM.
 
 ```sh
 cargo fmt --all --check
-cargo test --workspace --locked                 # host tests, the settings window headless
-cargo clippy --target i686-pc-windows-gnu --workspace --all-targets -- -D warnings
-cargo deny check
-for t in linux/tests/*.sh packaging/tests/*.sh; do sh "$t"; done
-cargo build --release --locked --target i686-pc-windows-gnu
-sdk/scripts/wine-test --locked --workspace      # Windows-target tests under Wine, headless
-sh ../rea-launcher-sdk/scripts/sdk-sync --check .   # sdk/ matches the pinned SDK
-sdk/scripts/launcher-check                      # the rea launcher family's rules
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets -- -D warnings
+sdk/scripts/launcher-check
+../rea-launcher-sdk/scripts/sdk-sync --check .
 ```
 
-- New SDK release: `sdk/scripts/sdk-bump vX.Y.Z` moves the Cargo tags,
-  `sdk/` and the workflow pins together and prints the migration notes.
-- Free the disk space builds take: `sdk/scripts/clean` (a dry run), then
-  `sdk/scripts/clean --yes`.
-- Real-game tests read your installed copy and never change it:
-  `SAI_GAME_DIR=<game folder> cargo test -- --ignored`.
-- Third-party components are fetched at package time from pinned URLs
-  with SHA-256 (`packaging/`); GitHub Actions (the SDK's reusable
-  workflows) runs the checks, builds the zip and the AppImage, and
-  publishes a release for each `v*` tag.
+The Windows target (`x86_64-pc-windows-gnu`) needs MinGW-w64, lld and the
+Rust target; the launcher enables eframe's `wgpu` feature and selects the
+D3D12 renderer on Windows (Linux keeps glow). The owner used a Docker image
+with the SDK's toolchain. The
+Windows tests were built there and run with the host's Wine 11 (the SDK's
+`wine-test` container's older Wine lacks `bcryptprimitives.dll`):
 
-Rules for contributors and coding agents: [AGENTS.md](AGENTS.md).
-Community fixes and decisions: [docs/RESEARCH.md](docs/RESEARCH.md); what
-was verified in the real game: [docs/RUNTIME_NOTES.md](docs/RUNTIME_NOTES.md).
+```sh
+cargo build --release --locked --target x86_64-pc-windows-gnu
+# then run target/.../deps/*.exe with wine, or the SDK wine-test with Wine >= 9
+```
 
-<!-- Optional: ## How it works — 4–6 plain steps of what happens on Play. -->
+The Windows package inputs are pinned in `packaging/windows-pins.txt`
+(RetroArch 1.22.2 `RetroArch.7z` and `RetroArch_cores.7z`, with SHA-256).
+The launcher is at `crates/sai-launcher`; the Linux helper at
+`linux/sai-play`; the runtime/core-options writer at
+`crates/sai-launcher/src/retroarch.rs`; the Controls tab and `controls.cfg`
+at `crates/sai-launcher/src/controls.rs`.
 
 ## Built on rea-launcher-sdk
 
-The private copy of the game, `launcher.cfg` and the option table, the
-settings window's widgets, the Linux helper's library (`rea-play.sh`),
-packaging and CI come from
-[rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk), shared by every rea launcher. It is pinned
-by tag in `Cargo.toml` and vendored in `sdk/` (the tag is in
-`sdk/VERSION`). This repository keeps what is specific to Super Adventure Island.
+The option table, settings window, save/runtime layout, single-instance
+guard, Linux play helper, snapshots and packaging structure come from
+[rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk) v0.4.3,
+pinned in `Cargo.toml` and vendored in `sdk/`. The game-specific parts are
+the ROM edition table, the RetroArch configuration/core-options writer and
+the looks.
 
 ## Contributing
 
-- **About Super Adventure Island** (its versions, fixes, settings, `sai-play`'s game
-  settings, this README): issues and pull requests here.
-- **Shared code** (the private copy, the settings window's widgets, the
-  option table, `rea-play.sh`, packaging, CI workflows, anything under
-  `sdk/`): issues and pull requests at
+- **The launcher, the ROM edition table, the looks and the retroarch
+  configuration:** open an issue or pull request here.
+- **Shared code** (the settings-window widgets, the option table, the play
+  helper, `rea-play.sh`, packaging): report it at
   [rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk/issues).
-- **How to tell:** code under `sdk/` or from a `rea_launcher*` crate is
-  the SDK's; if the same problem would happen with another rea launcher,
-  it's the SDK's. Not sure? Open it here and it will be moved.
-- Never patch `sdk/` or copy SDK code here: fix the SDK and bump the tag.
-- Never attach game files (executables, saves, data) to an issue.
+- Never attach the ROM, a save or any game file to an issue. Report the
+  SHA-256 of an unknown ROM, never the file.
 
 ## Credits
 
-<!-- TODO: one line per community project the launcher bundles,
-configures, downloads or reimplements (author, link, what it does here),
-the window's imagery (author, licence), Wine and Kron4ek's builds, the
-AppImage tools, and where the fixes were found (PCGamingWiki). Every
-THIRD_PARTY.md entry has a line here. -->
-
-- The Barlow fonts by Jeremy Tribby (SIL Open Font License).
+- [RetroArch](https://www.retroarch.com) and the libretro project: the
+  emulator frontend and the slang shaders.
+- [Snes9x](https://github.com/libretro/snes9x) and
+  [bsnes-hd](https://github.com/DerKoun/bsnes-hd): the SNES cores.
+- The Barlow fonts by Jeremy Tribby (SIL OFL), through rea-launcher-sdk.
+- Juliano_Dio: the PT-BR translation in the owner's ROM.
 - [rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk).
 
 Full list with licences: [THIRD_PARTY.md](THIRD_PARTY.md).
 
 ## Legal
 
-Super Adventure Island belongs to its publisher. This project is not affiliated with or
-endorsed by them, contains no game files, and only runs a copy you own.
-<!-- TODO: name the copyright holder ("Super Adventure Island is © …"). -->
-Our code is MIT OR Apache-2.0 ([LICENSE-MIT](LICENSE-MIT),
-[LICENSE-APACHE](LICENSE-APACHE)); bundled components keep their own
-licences ([THIRD_PARTY.md](THIRD_PARTY.md)).
+Super Adventure Island is © Hudson Soft / Nintendo and its rights holders.
+This project is not affiliated with or endorsed by them. It contains no
+game files and only runs a copy the player owns. The launcher's code is
+MIT OR Apache-2.0; bundled third-party parts keep their own licences
+([THIRD_PARTY.md](THIRD_PARTY.md)).

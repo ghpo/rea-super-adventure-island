@@ -3,7 +3,6 @@ name: build
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -15,34 +14,13 @@ permissions:
   contents: read
 
 jobs:
-  # The shared rea-launcher-sdk CI: formatting, host tests, cargo audit and
-  # deny, sdk/ drift, shell syntax and the Linux helper and packaging tests,
-  # Windows-target clippy, the release build, the Windows-target tests under
-  # Wine (headless), packaging and the package allowlist
-  # (rea-launcher-sdk docs/playbooks/ci-and-releases.md).
+  # The shared SDK CI, with this launcher's native configuration:
+  # formatting, host tests, cargo audit/deny, sdk/ drift, launcher-check,
+  # shell syntax/tests, the Linux build, the x86_64 Windows clippy/release
+  # build and the Windows-target tests under Wine (headless).
   ci:
     uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-ci.yml@v0.4.3
     with:
-      rust-target: i686-pc-windows-gnu
+      rust-target: x86_64-pc-windows-gnu
+      apt-packages: gcc-mingw-w64-x86-64 lld zip unzip
       wine-tests: true
-      package-command: packaging/package.sh "dist/SAILauncher-$REA_VERSION_NAME"
-      package-dir: dist/SAILauncher-*/
-      package-allowlist: packaging/package.allow
-      artifact-name: SAILauncher-packages
-      artifact-paths: |
-        dist/*.zip
-        dist/*.AppImage
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: ci
-    # All three, even with attest: false (GitHub checks a called workflow's
-    # permissions before any if:).
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
-    uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-release.yml@v0.4.3
-    with:
-      package: sai-launcher
-      artifact-pattern: SAILauncher-*

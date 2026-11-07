@@ -1,0 +1,10 @@
+# Windows package inputs (RetroArch 1.22.2, x86_64), fetched 2026-11-07.
+# The Windows build is x86_64-pc-windows-gnu; the package contains the
+# launcher + RetroArch-Win64 + the two cores + the slang shaders.
+retroarch_url = https://buildbot.libretro.com/stable/1.22.2/windows/x86_64/RetroArch.7z
+retroarch_sha256 = b2139b1d0f9d4526dc6b5ce23cbb3efdc766096fa6f2c3df016818b486ac6372
+cores_url = https://buildbot.libretro.com/stable/1.22.2/windows/x86_64/RetroArch_cores.7z
+cores_sha256 = 86b871e11b9b4772ac644b40a38f2c8e9449da1f355eae7da08aa061148547b0
+snes9x_core = RetroArch-Win64/cores/snes9x_libretro.dll
+bsnes_hd_core = RetroArch-Win64/cores/bsnes_hd_beta_libretro.dll
+shaders = RetroArch-Win64/shaders/shaders_slang

@@ -1,21 +1,94 @@
-# The folder with your installed game. It is only read, never changed.
+# The folder with Super Adventure Island.sfc, or the ROM file itself. It is
+# only read, never changed.
 # Values: a folder or file.
 #game =
 
-# Sets the picture options at once: as the game shipped, recommended for
-# your screen, or for the Steam Deck. Options set after it win.
-# Values: original, recommended or steam_deck.
-look = recommended
+# Sets the picture options at once: the game as shipped, the recommended
+# crisp look, a CRT, or the experimental Mode 7 widescreen. Options set
+# after it win.
+# Values: original, enhanced, crt, widescreen or steam_deck.
+look = enhanced
 
-# The game's screen size, or original for the size it shipped with.
-# Values: WIDTHxHEIGHT or original.
-resolution = 2560x1440
+# Pixel-perfect keeps the SNES 8:7 pixels square; 4:3 is the television
+# shape; widescreen is only for the bsnes-hd Mode 7 scenes.
+# Values: pixel, 4:3 or widescreen.
+aspect = pixel
+
+# Only whole-number enlargements, so every pixel stays the same size. It
+# leaves black borders on screens that do not fit another multiple.
+# Values: on or off.
+integer_scale = on
+
+# How the picture is enlarged: off (nearest), sharp, a CRT monitor look, or
+# a smooth xBR edge blend.
+# Values: off, sharp, crt or smooth.
+shader = off
+
+# Raises the emulated SNES CPU to remove in-game slowdown. Compatible is the
+# safe choice for most games; Max can break timing.
+# Values: off, light, compatible or max.
+overclock = compatible
+
+# Draws Mode 7 backgrounds at 2× or 4× the original resolution. It only
+# affects Mode 7 scenes.
+# Values: off, 2x or 4x.
+mode7_hd = 2x
+
+# Merges the SNES high-resolution layers instead of showing them as hard
+# alternating lines.
+# Values: on or off.
+hires_blend = on
+
+# Lets more sprites stay on screen at once, so fewer of them blink out.
+# Values: on or off.
+reduce_flicker = on
+
+# The bsnes-hd experimental widescreen. It only widens Mode 7 scenes; the
+# ordinary side-scrolling levels stay 4:3.
+# Values: on or off.
+widescreen = off
 
 # Waits for the screen's refresh: no tearing, slightly more input delay.
 # Values: on or off.
 vsync = on
 
-# Where the launcher keeps its private copy of the game. Default: a runtime
-# folder beside launcher.log.
+# Runs frames ahead of the screen to cut input lag. Two frames is a good
+# default; turn it off if audio crackles.
+# Values: 0, 1 or 2.
+run_ahead = 2
+
+# The game fills the screen instead of opening in a window.
+# Values: on or off.
+fullscreen = on
+
+# Which SNES core runs the game. Auto uses Snes9x, or bsnes-hd when
+# widescreen is on.
+# Values: auto, snes9x or bsnes_hd.
+core = snes9x
+
+# The emulator's frame-rate counter in the corner.
+# Values: on or off.
+show_fps = off
+
+# Where the launcher keeps your save files and save states.
+# Values: a folder or file.
+#saves =
+
+# Where the launcher keeps its generated emulator configuration and logs.
 # Values: a folder or file.
 #runtime =
+
+# The RetroArch program. By default the launcher finds it on PATH, or in the
+# Windows package.
+# Values: a folder or file.
+#retroarch =
+
+# The folder with snes9x_libretro and bsnes_hd_beta_libretro. By default the
+# launcher finds it in the system's libretro folder or the Windows package.
+# Values: a folder or file.
+#core_dir =
+
+# The root of the slang shaders (the folder that contains crt/ and
+# pixel-art-scaling/).
+# Values: a folder or file.
+#shader_dir =

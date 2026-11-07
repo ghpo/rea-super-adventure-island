@@ -1,87 +1,98 @@
-<!--
-  For agents: follows sdk/docs/playbooks/readme.md ("linux/README.md").
-  Fill the TODOs, keep the headings, then run this file through the
-  `humanizer` skill (wording only) and delete this comment.
--->
-
 # Super Adventure Island on Linux
 
-The launcher is a Windows program (the same one as on Windows); on Linux
-it runs through Wine or Proton. Three ways to play:
+The launcher is a native Linux program (not Wine/Proton). It uses the
+system RetroArch with the Snes9x core and writes a private configuration;
+your `~/.config/retroarch` is not changed. The ROM is only read.
 
-## The AppImage
+## Packages
+
+On Arch:
 
 ```sh
-chmod +x SAILauncher-*-x86_64.AppImage
-./SAILauncher-*-x86_64.AppImage
+sudo pacman -S retroarch libretro-snes9x libretro-shaders-slang libretro-bsnes-hd
 ```
 
-It brings its own Wine, so nothing else needs to be installed. The
-settings window opens: press **Browse…** and pick your game folder (your
-Linux files are on drive `Z:`), choose a look and press **Play**. When
-[gamescope](https://github.com/ValveSoftware/gamescope) is installed the
-game runs in it; otherwise in a plain window. Its Wine prefix is
-`~/.local/share/sai-launcher/prefix`.
+`libretro-shaders-slang` is only needed for the CRT/Sharp/Smooth looks;
+`libretro-bsnes-hd` only for the Widescreen look. `jq` is used by the
+Hyprland fractional-scale fix; without it the game still runs, at the
+monitor's scale.
 
-## Steam (Proton)
+## The helper
 
-1. Unzip the release, for example into `~/Games/sai-launcher`.
-2. In Steam: **Games → Add a Non-Steam Game to My Library…** and pick
-   `SAILauncher.exe`.
-3. **Properties → Compatibility**: force a Proton version.
-4. Press **Play**, pick your game folder (under drive `Z:`), choose a look
-   and press **Play**.
-
-### Steam Deck
-
-Follow the steps above in Desktop Mode, then play from Game Mode. The
-window recommends the **Steam Deck** look and works with the controls.
-
-<!-- TODO: say whether Game Mode has been verified. -->
-
-## Your own Wine
-
-`linux/sai-play` runs the launcher and the game in a private Wine prefix,
-inside gamescope when it is installed. It needs `rea-play.sh` beside it
-(the zip and the AppImage ship it) or in `../sdk/` (a repository checkout).
+`linux/sai-play` (next to the launcher in a package, or one folder up with
+`../target/release/SAILauncher` in a checkout) sources
+`sdk/rea-play.sh` or a `rea-play.sh` beside it:
 
 ```sh
-linux/sai-play             # the settings window, then the game
-linux/sai-play --play      # the game with the saved settings, no window
-linux/sai-play stop        # end the game
+linux/sai-play             # settings window, then the game
+linux/sai-play --play      # game with the saved settings, no window
+linux/sai-play stop        # end the session
 linux/sai-play status      # running or idle
 ```
 
 Launcher options after `--play` apply to that run, for example
-`linux/sai-play --play --look original`. When Wine and gamescope live in
-a [distrobox](https://github.com/containers/distrobox), run it through the
-container:
+`linux/sai-play --play --look crt`. `--check` identifies the ROM (the helper forwards it to the launcher):
 
 ```sh
-SAI_RUN="distrobox enter gaming --" linux/sai-play
+linux/sai-play --check --game "/path/to/roms"
 ```
+
+The helper runs the launcher with `--settings --linux` for the window and
+with `--no-window --linux` for the game, so Play-time errors still reach a
+message window. It keeps one session at a time (`~/.config/sai-launcher/running.pid`)
+and uses the launcher's single-instance guard too.
+
+## The package on this machine
+
+The owner's local install is in `~/.local/share/sai-launcher/`:
+
+- `SAILauncher` (the release binary)
+- `sai-play` and `rea-play.sh`
+- the menu entries in `~/.local/share/applications/`:
+  `sai-launcher.desktop` (settings window) and `sai-launcher-game.desktop`
+  (`sai-play --play`)
+- the icon in `~/.local/share/icons/hicolor/256x256/apps/sai-launcher.png`
+
+Add `~/.local/share/sai-launcher/sai-play --play` as a non-Steam game in
+Steam for a direct game shortcut; the `.desktop` game entry is another way.
+`~/.local/bin/sai-play` is a convenience symlink.
 
 ## Environment
 
 | Variable | Meaning |
-|---|---|
-| `SAI_PREFIX` | the Wine prefix (default `~/.local/share/sai-launcher/prefix`) |
-| `SAI_LAUNCHER` | `SAILauncher.exe` (default: beside the script, or one folder up) |
-| `SAI_RUN` | a wrapper for wine and gamescope, e.g. `distrobox enter gaming --` |
-| `SAI_GPU` | GPU environment instead of the detected one (empty: none) |
+| --- | --- |
+| `SAI_LAUNCHER` | the `SAILauncher` program (default: beside the helper, one folder up, or the repository's release/debug build) |
+| `SAI_WAIT` | accepted for AppImage compatibility; every launch waits |
+| `SAI_GPU` | the GPU environment for the game (`SAI_GPU=` for none, the default here; set the NVIDIA offload variables to use the discrete GPU) |
+| `SAI_MAX_FRAMES`, `SAI_TEST_SCREENSHOT` | test seams: run RetroArch for N frames and save the last frame (used in `docs/RUNTIME_NOTES.md`) |
+
+## Fractional scaling (Hyprland)
+
+At monitor scale 1.25 a fullscreen RetroArch gets a 1536×864 logical
+surface, so the 256×224 picture is resampled. While the game runs the
+helper sets the focused monitor to scale 1 through `hyprctl eval` and
+restores it on every exit path; the launcher has the same guard for a
+direct start. Gamescope was tested and is deliberately off: it cost frames
+on this Intel GPU.
 
 ## Where things are
 
 | What | Where |
-|---|---|
-| Settings (`launcher.cfg`) and log (`launcher.log`) | in the prefix, `drive_c/users/<you>/AppData/Local/SAILauncher/` |
-| The launcher's copy of the game | `…/AppData/Local/SAILauncher/runtime` |
-| Your saves | TODO |
-| `sai-play`'s logs and lock | `~/.config/sai-launcher` |
+| --- | --- |
+| Settings, controls and log | `~/.config/sai-launcher/launcher.cfg`, `controls.cfg`, `launcher.log` |
+| Generated RetroArch config, states, logs | `~/.local/share/sai-launcher/runtime/` |
+| Saves | `~/.local/share/sai-launcher/saves/` |
+| The existing RetroArch save imported once | `~/.config/retroarch/saves/Snes9x/` |
+| The ROM | wherever you keep it |
 
 ## Troubleshooting
 
-<!-- TODO: Linux-only problems found in testing, as bold symptom + fix. -->
-
-- **Anything else:** run `SAILauncher.exe --check` through the AppImage or
-  `sai-play`, and look at `launcher.log` (see the table above).
+- **`RetroArch was not found`**: install the packages above or pass
+  `--retroarch <program>`, `--core-dir <folder>`, `--shader-dir <folder>`.
+- **The window does not open**: the helper plays with the saved settings
+  when the settings window exits with 4; check `settings.log` in
+  `~/.config/sai-launcher`.
+- **The scale looks wrong after a hard kill**: restore the monitor scale
+  in your Hyprland config; the helper's trap covers normal exits,
+  `stop`, Ctrl+C and `--play`.
+- **The game log**: `~/.local/share/sai-launcher/runtime/logs/retroarch.log`.

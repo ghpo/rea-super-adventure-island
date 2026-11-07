@@ -14,17 +14,20 @@ path = "src/main.rs"
 
 [dependencies]
 rea-launcher.workspace = true
-# Its Windows parts are cfg(windows); the console decision is portable.
+rea-launcher-ui.workspace = true
+# The Windows settings window uses the wgpu (D3D12) backend: the VM has no
+# OpenGL for eframe's default glow backend. Linux keeps glow.
+eframe = { version = "0.37", default-features = false, features = ["wgpu"] }
+# Only the Windows console/dialog/instance helpers; the rest of the crate is
+# cfg(windows) inside, and the audience rule is portable.
 rea-launcher-win32.workspace = true
+# Reading `hyprctl monitors -j` on Linux to keep integer scaling pixel-perfect
+# under a fractional monitor scale.
+serde_json = "1"
 
 [build-dependencies]
 rea-launcher-build.workspace = true
 
-[target.'cfg(windows)'.dependencies]
-rea-launcher-ui.workspace = true
-
-# The settings window also builds on the host for its tests: the palette's
-# contrast test and the headless window tests (egui_kittest) run with
-# `cargo test` and under `sdk/scripts/wine-test`.
 [dev-dependencies]
+# Headless GUI tests (egui_kittest through AccessKit; no window, no GPU).
 rea-launcher-ui = { workspace = true, features = ["testing"] }

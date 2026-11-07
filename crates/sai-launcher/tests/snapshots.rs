@@ -15,6 +15,7 @@ use sai_launcher::config::{self, Look};
 /// whatever the game is called.
 fn masked(text: &str) -> String {
     text.replace("SAILauncher.exe", "<launcher>")
+        .replace("SAILauncher", "<launcher>")
         .replace("linux/sai-play", "linux/<id>-play")
         .replace("Super Adventure Island", "<game>")
 }

@@ -5,15 +5,30 @@ Usage: <launcher> [options]
 Without options the settings window opens; Play saves them and starts the game.
 
 Options (each is also a launcher.cfg key):
-  --game <folder>                         Game folder
-  --look original|recommended|steam_deck  Look
-  --resolution <WxH>                      Resolution
-  --vsync on|off                          VSync
-  --runtime <folder>                      Runtime folder
+  --game <folder or .sfc file>                        ROM folder
+  --look original|enhanced|crt|widescreen|steam_deck  Look
+  --aspect pixel|4:3|widescreen                       Aspect ratio
+  --integer-scale on|off                              Integer scaling
+  --shader off|sharp|crt|smooth                       Shader
+  --overclock off|light|compatible|max                Reduce slowdown
+  --mode7-hd off|2x|4x                                HD Mode 7
+  --hires-blend on|off                                Hi-res blending
+  --reduce-flicker on|off                             Reduce flicker
+  --widescreen on|off                                 Widescreen (Mode 7)
+  --vsync on|off                                      VSync
+  --run-ahead 0|1|2                                   Run-ahead
+  --fullscreen on|off                                 Fullscreen
+  --core auto|snes9x|bsnes_hd                         Core
+  --show-fps on|off                                   Show FPS
+  --saves <folder>                                    Saves folder
+  --runtime <folder>                                  Runtime folder
+  --retroarch <program>                               RetroArch
+  --core-dir <folder>                                 Core folder
+  --shader-dir <folder>                               Shader folder
 
 Launcher switches:
   --settings   only the settings window (exit 0 after Play, 3 when closed)
   --no-window  play with the saved settings and these options, no window
-  --check      check the game folder and its edition, then exit (see launcher.log)
+  --check      check the ROM and its edition, then exit (see launcher.log)
   --linux      started by the Linux helper (linux/<id>-play)
   --help       this text

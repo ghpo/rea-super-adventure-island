@@ -1,25 +1,18 @@
 #!/bin/sh
-# Plays Super Adventure Island on Linux through Wine and gamescope, using the
-# rea-launcher-sdk play library (sdk/rea-play.sh; see its shell/README.md).
+# Plays Super Adventure Island on Linux with the rea-launcher-sdk play
+# library (sdk/rea-play.sh).
 #
 #   sai-play             show the settings window, then start the game
 #   sai-play --play      start with the saved settings (no window)
-#   sai-play stop        end the game session and its private Wine prefix
+#   sai-play stop        end the game session
 #   sai-play status      running or idle
 #
 # Optional environment:
-#   SAI_PREFIX    Wine prefix (default ~/.local/share/sai-launcher/prefix)
-#   SAI_LAUNCHER  SAILauncher.exe (default: next to this script, or one up)
-#   SAI_RUN       a wrapper that runs wine and gamescope, e.g.
-#                      "distrobox enter gaming --" when they live in a container
-#   SAI_WAIT      set by the AppImage (every launch waits anyway)
-#   SAI_GPU       GPU environment to use instead of the detected one
+#   SAI_LAUNCHER   SAILauncher (default: next to this script, one folder up,
+#                  or the debug/release build in a repository checkout)
+#   SAI_WAIT       accepted for AppImage compatibility; every launch waits
 set -u
 
-# --- the library: next to this script in a package, else the vendored copy --
-# Tests source this script with REA_FUNCTIONS_ONLY=1 (load, don't run) and
-# REA_PLAY_HERE=<this script's folder> ($0 is then the test). REA_PLAY_HERE
-# counts only in that mode; the library drops both once sourced.
 _fonly=${REA_FUNCTIONS_ONLY:-}
 _here=$(dirname "$(readlink -f "$0")")
 [ "$_fonly" = 1 ] && [ -n "${REA_PLAY_HERE:-}" ] && _here=$REA_PLAY_HERE
@@ -33,35 +26,70 @@ else
 fi
 REA_HERE=$_here REA_NAME=sai-play
 
-# --- configuration (after sourcing: inherited REA_* values are dropped, so
-# only the player-facing SAI_* names below reach the library) ----------
-REA_APP=sai-launcher                 # ~/.config/sai-launcher, the prefix name
-REA_EXE_NAME=SAILauncher.exe
+REA_MODE=native
+REA_APP=sai-launcher
+REA_EXE_NAME=SAILauncher
 REA_EXE_HINT=SAI_LAUNCHER
 REA_EXE=${SAI_LAUNCHER:-}
-REA_PREFIX=${SAI_PREFIX:-}
-REA_RUN=${SAI_RUN:-}
+REA_EXE_SEARCH="../target/release/SAILauncher ../target/debug/SAILauncher"
+REA_STATE_BASE=${XDG_CONFIG_HOME:-$HOME/.config}
 REA_WAIT=${SAI_WAIT:-}
-[ -n "${SAI_GPU+set}" ] && REA_GPU=$SAI_GPU   # SAI_GPU= for no GPU choice
-REA_CFG_APPDATA=SAILauncher       # AppData\Local\SAILauncher\launcher.cfg
-REA_WINEDBG_OFF=1                     # a fault ends the game, no hidden debugger
-# What size each look gives gamescope (config.rs Look::picture; keep in step):
-REA_LOOK_SIZES="original=original recommended=screen steam_deck=1280x800"
-# Game choices to make once the game is known (sdk shell/README.md, "Game
-# differences kept as settings"):
-#   REA_ORIGINAL_SIZE=640x480         what resolution = original means
-#   REA_DLL_OVERRIDES='d3d9=n,b'      the game's WINEDLLOVERRIDES (DXVK, ...)
-#   REA_GAME_PROCS='SuperAdventureIsland.exe'       when the launcher returns before the game
-#                                     (at most 15 characters per name)
+REA_ALWAYS_WAIT=1
+# The launcher sets the monitor to scale 1 while RetroArch runs and restores
+# it on exit; gamescope stays off (it cost frames on the Intel GPU here).
+REA_GAMESCOPE=off
+REA_GAMESCOPE_OUTPUT=0
+REA_GPU=${SAI_GPU-}
+REA_DIRECT_NOTE="starting the game"
+REA_PLAY_ARGS="--no-window --linux"
+REA_SETTINGS_ARGS="--settings --linux"
+REA_FLAG_SWITCHES="--no-window --settings --linux --check --help"
+REA_HELPER_KEYS=""
+REA_LOOK_KEY=look
+REA_LOOK_SIZES=
+REA_GAME_PROCS=
+REA_SDL_ENV=
 
-# --- game hooks --------------------------------------------------------------
+# --- Hyprland fractional scale -------------------------------------------------
+# A fullscreen RetroArch on a 1.25-scaled monitor gets a 1536x864 logical
+# surface, so the 256x224 picture is resampled. Set the focused monitor to
+# scale 1 only while the game runs, and restore it on every exit path. The
+# launcher has the same guard for a direct start; whichever runs first sets
+# it, and both restore the same value.
+_scale_name= _scale_mode= _scale_pos= _scale_orig= _scale_set=
+scale_restore() {
+  [ -n "${_scale_set:-}" ] || return 0
+  _scale_set=
+  hyprctl eval "hl.monitor({output=\"$_scale_name\", mode=\"$_scale_mode\", position=\"$_scale_pos\", scale=$_scale_orig})" >/dev/null 2>&1 || true
+}
+trap scale_restore EXIT
+scale_pixel_perfect() {
+  command -v hyprctl >/dev/null 2>&1 || return 0
+  [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  _json=$(hyprctl monitors -j 2>/dev/null) || return 0
+  _info=$(printf '%s' "$_json" | jq -r '.[] | select(.focused) | [.name, (.width|tostring), (.height|tostring), (.refreshRate|tostring), (.x|tostring), (.y|tostring), (.scale|tostring)] | @tsv' 2>/dev/null | head -n 1)
+  [ -n "$_info" ] || return 0
+  IFS=$(printf '\t') read -r _scale_name _w _h _ref _x _y _scale_orig <<EOF
+$_info
+EOF
+  case $_scale_orig in 1|1.0|1.00) return 0 ;; esac
+  _scale_mode=${_w}x${_h}@${_ref}
+  _scale_pos=${_x}x${_y}
+  _scale_set=1
+  hyprctl eval "hl.monitor({output=\"$_scale_name\", mode=\"$_scale_mode\", position=\"$_scale_pos\", scale=1})" >/dev/null 2>&1 || _scale_set=
+}
+rea_hook_before_start() { scale_pixel_perfect; }
 
-# Once per prefix: no crash dialog.
-rea_hook_before_start() {
-  rea_wine_no_crash_dialog
+# `sai-play --check ...` is the launcher's own command: forward it instead of
+# the helper's usage. Everything else keeps the library's behaviour.
+rea_hook_command() {
+  case "${1:-}" in
+    --check) rea_require_exe || exit 1; exec "$REA_EXE" "$@" ;;
+    *) return 127 ;;
+  esac
 }
 
 rea_init || exit 1
-# Tests load the configuration and hooks without running anything.
 [ "$_fonly" = 1 ] && return 0
 rea_main "$@"

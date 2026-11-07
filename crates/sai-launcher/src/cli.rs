@@ -12,7 +12,7 @@ use crate::edition::{self, Found};
 
 /// Exit codes. The Linux helper reads the `--settings` ones.
 pub const OK: i32 = 0;
-/// Refused: an unknown edition, no game folder, a failed `--check`.
+/// Refused: a bad ROM, no ROM folder, a failed `--check`.
 pub const REFUSED: i32 = 1;
 /// A bad command line (the family code, `report::BAD_COMMAND_LINE`).
 pub const USAGE_ERROR: i32 = rea_launcher_win32::report::BAD_COMMAND_LINE;
@@ -28,7 +28,7 @@ pub enum Mode {
     /// The settings window; then the game, unless `settings_only`
     /// (`--settings`).
     Window { settings_only: bool },
-    /// `--check`: identify the game folder and report, never launch.
+    /// `--check`: identify the ROM and report, never launch.
     Check,
     /// `--no-window`, or any option flag: play with the saved settings and
     /// the flags on top.
@@ -41,20 +41,13 @@ pub struct Invocation {
     pub mode: Mode,
     /// Started by the Linux helper (`--linux`).
     pub linux: bool,
-    /// `--no-window` was given (a script on native Windows; the helper's
-    /// game run under Wine).
+    /// `--no-window` was given (a script, or the helper's game run).
     pub no_window: bool,
     /// The settings the flags set, to go on top of `launcher.cfg`.
     pub flags: Settings,
 }
 
 impl Invocation {
-    /// Whether output goes to the terminal that started the launcher
-    /// (`--help`, `--check`, `--no-window`); the window shows its own.
-    pub fn wants_console(&self) -> bool {
-        !matches!(self.mode, Mode::Window { .. })
-    }
-
     /// The family flags of this run, for the SDK's audience rule.
     pub fn run(&self) -> Run {
         Run {
@@ -69,15 +62,12 @@ impl Invocation {
     }
 
     /// Who may see this run's messages (`wine`: running under Wine). The
-    /// SDK decides it; never write `!no_window` or `!linux` here: the
-    /// Linux helper starts the game with `--no-window --linux` for a player
-    /// who is watching (STANDARDS "Messages reach the player").
+    /// SDK decides it; never write `!no_window` or `!linux` here.
     pub fn audience(&self, wine: bool) -> Audience {
         Audience::of(self.run(), wine)
     }
 
-    /// Whether the run does work without the window (`--check`): a second
-    /// start then never brings the open window forward and exits non-zero.
+    /// Whether the run does work without the window (`--check`).
     pub fn is_action(&self) -> bool {
         self.mode == Mode::Check
     }
@@ -99,7 +89,7 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Invocation, Strin
         }
         Err(error) => {
             return Err(format!(
-                "{error}\n\nRun SAILauncher.exe --help for the options."
+                "{error}\n\nRun SAILauncher --help for the options."
             ));
         }
     };
@@ -129,30 +119,32 @@ pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Invocation, Strin
     })
 }
 
-/// The game folder from the settings, made absolute against `cwd`.
-pub fn game_folder(settings: &Settings, cwd: &Path) -> Result<PathBuf, String> {
+/// The ROM folder/file from the settings, made absolute against `cwd`.
+pub fn game_path(settings: &Settings, cwd: &Path) -> Result<PathBuf, String> {
     let game = settings.game.as_deref().ok_or_else(|| {
         format!(
-            "No game folder yet. Choose it in the settings window, or run:\n\n\
-             SAILauncher.exe --game <the folder with {}>",
-            edition::GAME_EXE
+            "No ROM yet. Choose it in the settings window, or run:\n\n\
+             SAILauncher --game <the folder with {}>",
+            edition::ROM_NAME
         )
     })?;
     paths::resolve(game, cwd)
 }
 
-/// `--check`: the game folder and its edition, or why it cannot be played.
+/// `--check`: the ROM and its edition, or why it cannot be played.
 pub fn check(settings: &Settings, cwd: &Path) -> Result<(PathBuf, Found), String> {
-    let game = game_folder(settings, cwd)?;
+    let game = game_path(settings, cwd)?;
     let found = edition::find(&game)?;
     Ok((game, found))
 }
 
-/// The `--check` report for a playable folder.
+/// The `--check` report for a playable ROM.
 pub fn check_report(game: &Path, found: &Found) -> String {
     format!(
-        "Ready to play: {} ({}) in {}",
-        edition::GAME_EXE,
+        "Ready to play: {} ({}) from {}",
+        found.rom.file_name().map_or(edition::ROM_NAME, |name| name
+            .to_str()
+            .unwrap_or(edition::ROM_NAME)),
         found.edition.name,
         game.display()
     )

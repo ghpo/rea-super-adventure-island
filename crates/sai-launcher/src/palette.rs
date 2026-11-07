@@ -1,21 +1,17 @@
-//! The settings window's colours and sizes, in the SDK's roles
-//! (`rea_launcher_ui::theme`).
+//! The settings window's colours and sizes: a tropical sunset over deep
+//! water, in the SDK's roles (`rea_launcher_ui::theme`).
 //!
-//! PLACEHOLDER colours: a neutral charcoal with one amber accent. Choose
-//! the game's own with a design skill (`frontend-design`, then a review
-//! with `web-design-guidelines`) once the window's imagery is picked
-//! (docs/STANDARDS.md "Give the window the game's identity"). The tests
-//! below keep any palette within WCAG AA and the text-size rules.
+//! The tests keep the palette within WCAG AA and the text-size rules.
 
 use rea_launcher_ui::egui::Color32;
 use rea_launcher_ui::theme::{Metrics, Palette, tint};
 
-pub const BASE: Color32 = Color32::from_rgb(0x15, 0x17, 0x1c);
-pub const PANEL: Color32 = Color32::from_rgb(0x21, 0x25, 0x2c);
-pub const LINE: Color32 = Color32::from_rgb(0x76, 0x7d, 0x89);
-pub const INK: Color32 = Color32::from_rgb(0xf1, 0xf3, 0xf6);
-pub const MUTED: Color32 = Color32::from_rgb(0xaa, 0xb2, 0xbe);
-pub const ACCENT: Color32 = Color32::from_rgb(0xf2, 0xb3, 0x3d);
+pub const BASE: Color32 = Color32::from_rgb(0x08, 0x18, 0x26);
+pub const PANEL: Color32 = Color32::from_rgb(0x10, 0x2f, 0x45);
+pub const LINE: Color32 = Color32::from_rgb(0x6b, 0x9a, 0xb2);
+pub const INK: Color32 = Color32::from_rgb(0xf3, 0xea, 0xd8);
+pub const MUTED: Color32 = Color32::from_rgb(0xa8, 0xc1, 0xcc);
+pub const ACCENT: Color32 = Color32::from_rgb(0xff, 0xb3, 0x47);
 pub const ERROR: Color32 = Color32::from_rgb(0xff, 0x8f, 0x80);
 
 pub const PALETTE: Palette = Palette {
@@ -25,13 +21,13 @@ pub const PALETTE: Palette = Palette {
     ink: INK,
     muted: MUTED,
     action: ACCENT,
-    action_hover: Color32::from_rgb(0xff, 0xc9, 0x5c),
+    action_hover: Color32::from_rgb(0xff, 0xc9, 0x6b),
     on_action: BASE,
     select: ACCENT,
     on_select: BASE,
     error: ERROR,
-    disabled_ink: Color32::from_rgb(0x6c, 0x73, 0x7e),
-    disabled_line: Color32::from_rgb(0x2e, 0x33, 0x3b),
+    disabled_ink: Color32::from_rgb(0x5b, 0x72, 0x80),
+    disabled_line: Color32::from_rgb(0x1b, 0x3a, 0x4d),
     focus: INK,
     selection: tint(ACCENT, 128),
 };

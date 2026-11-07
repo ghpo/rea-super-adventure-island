@@ -1,12 +1,20 @@
-unknown original: resolution original, vsync on
-unknown recommended: resolution 1920x1080, vsync on
-unknown steam_deck: resolution 1280x800, vsync on
-1920x1080 original: resolution original, vsync on
-1920x1080 recommended: resolution 1920x1080, vsync on
-1920x1080 steam_deck: resolution 1280x800, vsync on
-2560x1440 original: resolution original, vsync on
-2560x1440 recommended: resolution 2560x1440, vsync on
-2560x1440 steam_deck: resolution 1280x800, vsync on
-1280x800 original: resolution original, vsync on
-1280x800 recommended: resolution 1280x800, vsync on
-1280x800 steam_deck: resolution 1280x800, vsync on
+unknown original: aspect 4:3, integer_scale off, shader off, overclock off, mode7_hd off, hires_blend off, reduce_flicker off, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+unknown enhanced: aspect pixel, integer_scale on, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+unknown crt: aspect pixel, integer_scale on, shader crt, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+unknown widescreen: aspect widescreen, integer_scale off, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen on, vsync on, run_ahead 2, fullscreen on, core bsnes_hd, show_fps off
+unknown steam_deck: aspect pixel, integer_scale on, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+1920x1080 original: aspect 4:3, integer_scale off, shader off, overclock off, mode7_hd off, hires_blend off, reduce_flicker off, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+1920x1080 enhanced: aspect pixel, integer_scale on, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+1920x1080 crt: aspect pixel, integer_scale on, shader crt, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+1920x1080 widescreen: aspect widescreen, integer_scale off, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen on, vsync on, run_ahead 2, fullscreen on, core bsnes_hd, show_fps off
+1920x1080 steam_deck: aspect pixel, integer_scale on, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+2560x1440 original: aspect 4:3, integer_scale off, shader off, overclock off, mode7_hd off, hires_blend off, reduce_flicker off, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+2560x1440 enhanced: aspect pixel, integer_scale on, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+2560x1440 crt: aspect pixel, integer_scale on, shader crt, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+2560x1440 widescreen: aspect widescreen, integer_scale off, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen on, vsync on, run_ahead 2, fullscreen on, core bsnes_hd, show_fps off
+2560x1440 steam_deck: aspect pixel, integer_scale on, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+1280x800 original: aspect 4:3, integer_scale off, shader off, overclock off, mode7_hd off, hires_blend off, reduce_flicker off, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+1280x800 enhanced: aspect pixel, integer_scale on, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+1280x800 crt: aspect pixel, integer_scale on, shader crt, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
+1280x800 widescreen: aspect widescreen, integer_scale off, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen on, vsync on, run_ahead 2, fullscreen on, core bsnes_hd, show_fps off
+1280x800 steam_deck: aspect pixel, integer_scale on, shader off, overclock compatible, mode7_hd 2x, hires_blend on, reduce_flicker on, widescreen off, vsync on, run_ahead 2, fullscreen on, core snes9x, show_fps off
