@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Super Adventure Island Launcher
+Comment=Play your own copy of Super Adventure Island with modern compatibility fixes
+Exec=sai-play
+Icon=sai-launcher
+Terminal=false
+Categories=Game;
