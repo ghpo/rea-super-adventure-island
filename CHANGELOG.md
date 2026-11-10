@@ -5,6 +5,8 @@ All notable changes to the Super Adventure Island launcher. Versions are git tag
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-07
+
 ### Added
 
 - A native Linux/Windows launcher on rea-launcher-sdk v0.4.3: the ROM
