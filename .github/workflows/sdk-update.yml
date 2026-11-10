@@ -18,6 +18,6 @@ permissions:
 
 jobs:
   update:
-    permissions: {contents: write, pull-requests: write}
+    permissions: {contents: write, pull-requests: write, workflows: write}
     uses: akitaonrails/rea-launcher-sdk/.github/workflows/sdk-update.yml@v0.4.3
     # secrets: {token: ${{ secrets.SDK_UPDATE_TOKEN }}}  # so the PR runs CI
